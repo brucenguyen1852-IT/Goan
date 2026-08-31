@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgis/postgis:15-3.4
+    environment:
+      POSTGRES_USER: goan
+      POSTGRES_PASSWORD: goan
+      POSTGRES_DB: goan
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U goan"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://goan:goan@postgres:5432/goan
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: celery -A app.workers.celery_app.celery_app worker -B --loglevel=info
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://goan:goan@postgres:5432/goan
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
