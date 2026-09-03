@@ -55,7 +55,8 @@ async def seed() -> None:
                     ekyc_selfie_reference_url="https://cdn.goan.vn/seed/selfie.jpg",
                     escrow_balance=escrow,
                     escrow_status=(
-                        EscrowStatus.FULFILLED if escrow >= Decimal("3000000")
+                        EscrowStatus.FULFILLED
+                        if escrow >= Decimal("3000000")
                         else EscrowStatus.ACCUMULATING
                     ),
                     online_status=OnlineStatus.ONLINE,

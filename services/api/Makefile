@@ -1,4 +1,4 @@
-.PHONY: install dev test lint fmt type check migrate seed openapi
+.PHONY: install dev test lint fmt type check migrate seed openapi smoke
 
 install:
 	pip install -r requirements.txt
@@ -33,3 +33,7 @@ seed:
 
 openapi:
 	python scripts/export_openapi.py ../../packages/api-client/openapi.json
+
+# Smoke test end-to-end trên server đang chạy. QA chạy trước mỗi release.
+smoke:
+	python scripts/smoke_e2e.py
