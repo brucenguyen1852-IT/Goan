@@ -109,6 +109,8 @@
 | PRD-OPS-04 | Audit chỉ ghi thêm, không sửa không xoá | Phân định §2.3 | — | ⚠️ **Cần ràng buộc ở tầng DB** |
 | PRD-OPS-05 | Maker–checker cho thao tác chạm tiền | Phân định §2.3 | — | ❌ **P1** |
 | PRD-OPS-06 | Sentry bật theo cấu hình, không gửi kèm PII | Phân định §3.3 | — | ⚠️ **Thiếu test** |
+| PRD-OPS-07 | Số liệu Prometheus ở `/metrics`, nhãn `path` là template route (không nổ cardinality), khoá được bằng token | Phân định §3.3 | `test_metrics.py` QA-MET-01…06 | ✅ |
+| PRD-OPS-08 | Trace OpenTelemetry bật theo cấu hình; thiếu gói thì cảnh báo, không làm sập app | Phân định §3.3 | `test_metrics.py` QA-MET-07…08 | ✅ |
 
 ## G. Chat & Hỗ trợ *(toàn bộ thuộc P2, chưa bắt đầu)*
 

@@ -89,6 +89,14 @@ class Settings(BaseSettings):
     SENTRY_DSN: str = ""  # trống = tắt, không cần cài sentry-sdk ở dev
     SENTRY_TRACES_SAMPLE_RATE: float = 0.1
     RELEASE: str = ""
+    # Trace phân tán. Trống = tắt; gói OTel nằm ở requirements-observability.txt.
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
+    OTEL_SERVICE_NAME: str = "goan-api"
+    OTEL_TRACES_SAMPLE_RATE: float = 0.1
+    # Số liệu Prometheus ở /metrics. Đặt METRICS_TOKEN ở production để chỉ Prometheus scrape
+    # được — /metrics phơi bày đường dẫn và tần suất gọi, không nên để công khai.
+    METRICS_ENABLED: bool = True
+    METRICS_TOKEN: str = ""
 
     # --- Idempotency ---
     IDEMPOTENCY_TTL_SECONDS: int = 86400  # giữ kết quả 24h

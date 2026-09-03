@@ -1,0 +1,14 @@
+# Gói quan sát hệ thống, CHỈ cài ở staging/production.
+#
+# Không gộp vào requirements.txt: dev và CI không cần trace, mà mỗi gói thêm vào là mỗi lần
+# `pip install` chậm hơn và mỗi khả năng xung đột phiên bản mới. Thiếu các gói này thì
+# app vẫn chạy bình thường, chỉ ghi một dòng cảnh báo (xem app/core/observability.py).
+#
+#     pip install -r requirements.txt -r requirements-observability.txt
+
+sentry-sdk[fastapi]==2.19.2
+opentelemetry-sdk==1.29.0
+opentelemetry-exporter-otlp-proto-http==1.29.0
+opentelemetry-instrumentation-fastapi==0.50b0
+opentelemetry-instrumentation-sqlalchemy==0.50b0
+opentelemetry-instrumentation-redis==0.50b0

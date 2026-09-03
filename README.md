@@ -81,11 +81,27 @@ make audit
 
 ```bash
 cd services/api
-pytest -q            # 51 test, không cần Postgres/Redis
+pytest -q            # 192 test, không cần Postgres/Redis
 ruff check app tests
 ruff format --check app tests
 mypy app
 ```
+
+## Quan sát hệ thống
+
+`/metrics` phơi bày số liệu cho Prometheus (số request, độ trễ, request đang xử lý dở). Nhãn
+`path` là **template của route** (`/api/v1/trips/{trip_id}`) chứ không phải đường dẫn thật —
+lấy đường dẫn thật thì mỗi UUID thành một chuỗi thời gian và Prometheus chết vì cardinality.
+
+Đặt `METRICS_TOKEN` ở production để chỉ Prometheus scrape được. Trace phân tán và Sentry bật
+theo cấu hình, gói nằm riêng ở `services/api/requirements-observability.txt`:
+
+```bash
+pip install -r requirements.txt -r requirements-observability.txt
+# rồi đặt SENTRY_DSN và/hoặc OTEL_EXPORTER_OTLP_ENDPOINT trong .env
+```
+
+Thiếu gói mà vẫn đặt biến môi trường thì app chỉ ghi cảnh báo, không sập.
 
 ## Sinh API client cho frontend
 

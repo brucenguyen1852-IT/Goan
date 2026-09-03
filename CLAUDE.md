@@ -83,6 +83,11 @@ Redis pub/sub (nhiều instance). Vị trí tài xế nằm ở Redis GEO nên m
 DB là SQLite (dev). Job nền ở `app/workers/tasks.py` (Celery beat: nhả ví, hết hạn matching,
 đối soát ngày, quét tín hiệu ngoài app, chi hoàn ký quỹ).
 
+**Quan sát hệ thống**: `/metrics` (Prometheus) nằm ngoài OpenAPI và ngoài cùng chuỗi middleware.
+Nhãn `path` **phải** là template route — `core/metrics.route_label()` lo việc đó, đường dẫn lạ gom
+vào `unmatched`; đừng gắn nhãn bằng `request.url.path`. Sentry và OpenTelemetry bật theo biến môi
+trường, gói cài riêng từ `requirements-observability.txt`, thiếu gói thì cảnh báo chứ không sập.
+
 **Contract frontend–backend sinh tự động.** Backend đổi API → chạy `make -C services/api openapi`
 → commit `packages/api-client/openapi.json` (`src/generated/` thì **không** commit). CI có job
 riêng so bản sinh mới với bản đã commit, lệch là đỏ. Lý do: `apps/customer-web` từng tự đặt tên

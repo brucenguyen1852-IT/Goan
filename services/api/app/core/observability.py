@@ -82,5 +82,76 @@ def setup_sentry() -> bool:
     return True
 
 
+def setup_tracing(app: FastAPI) -> bool:
+    """Bật OpenTelemetry khi có OTEL_EXPORTER_OTLP_ENDPOINT. Không có thì im lặng bỏ qua.
+
+    Cùng nguyên tắc với Sentry: gói OTel KHÔNG nằm trong requirements.txt để môi trường dev và
+    CI không phải cài thêm ~10 gói chỉ để chạy test. Staging/production cài thêm:
+
+        pip install -r requirements-observability.txt
+
+    Thiếu gói mà vẫn đặt endpoint thì chỉ cảnh báo — mất trace là chuyện phải sửa, nhưng làm
+    sập tiến trình vì thiếu một gói quan sát thì tệ hơn nhiều.
+
+    Trace nối được với log và audit vì `X-Request-ID` đã có sẵn trong cả hai; khi cần tra một
+    sự cố thì đi từ request_id sang trace.
+    """
+    endpoint = getattr(settings, "OTEL_EXPORTER_OTLP_ENDPOINT", "") or ""
+    if not endpoint:
+        return False
+    try:
+        from opentelemetry import trace
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
+    except ImportError:
+        logger.warning(
+            "OTEL_EXPORTER_OTLP_ENDPOINT đã đặt nhưng chưa cài gói OpenTelemetry "
+            "(pip install -r requirements-observability.txt) — bỏ qua"
+        )
+        return False
+
+    resource = Resource.create(
+        {
+            "service.name": settings.OTEL_SERVICE_NAME,
+            "service.version": settings.RELEASE or "dev",
+            "deployment.environment": settings.ENV,
+        }
+    )
+    provider = TracerProvider(
+        resource=resource, sampler=TraceIdRatioBased(settings.OTEL_TRACES_SAMPLE_RATE)
+    )
+    provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint)))
+    trace.set_tracer_provider(provider)
+
+    # /health và /ready bị probe vài giây một lần: có trace cũng không đọc, chỉ tốn tiền lưu.
+    FastAPIInstrumentor.instrument_app(app, excluded_urls="health,ready,metrics")
+    _instrument_infra()
+    logger.info("OpenTelemetry đã bật (endpoint=%s, env=%s)", endpoint, settings.ENV)
+    return True
+
+
+def _instrument_infra() -> None:
+    """Trace cả truy vấn DB và lệnh Redis. Thiếu gói nào thì bỏ qua đúng gói đó."""
+    try:
+        from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+
+        from app.database import engine
+
+        # Engine async: OTel cần engine đồng bộ nằm bên dưới.
+        SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)
+    except Exception as exc:  # pragma: no cover - phụ thuộc gói tuỳ chọn
+        logger.warning("Không bật được trace SQLAlchemy: %s", type(exc).__name__)
+    try:
+        from opentelemetry.instrumentation.redis import RedisInstrumentor
+
+        RedisInstrumentor().instrument()
+    except Exception as exc:  # pragma: no cover - phụ thuộc gói tuỳ chọn
+        logger.warning("Không bật được trace Redis: %s", type(exc).__name__)
+
+
 def install(app: FastAPI) -> None:
     app.add_middleware(RequestIdMiddleware)
