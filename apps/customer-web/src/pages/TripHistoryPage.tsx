@@ -2,12 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { TripStatusBadge } from "@/components/ui/TripStatusBadge";
 import { getTripHistory } from "@/api/history";
+import { formatVnd } from "@/types";
 
 export function TripHistoryPage() {
   const navigate = useNavigate();
   const { data: trips, isLoading, isError } = useQuery({
     queryKey: ["trip-history"],
-    queryFn: getTripHistory,
+    queryFn: () => getTripHistory(),
   });
 
   return (
@@ -26,14 +27,14 @@ export function TripHistoryPage() {
           >
             <div className="mb-2 flex items-center justify-between">
               <TripStatusBadge status={trip.status} />
-              {trip.total_fare && (
-                <span className="font-semibold text-brand">{trip.total_fare.toLocaleString("vi-VN")}đ</span>
-              )}
+              <span className="font-semibold text-brand">
+                {formatVnd(trip.final_fare ?? trip.estimated_fare)}
+              </span>
             </div>
             <p className="text-sm text-white/80">{trip.pickup_address}</p>
             <p className="text-sm text-white/50">→ {trip.dropoff_address}</p>
             <p className="mt-1 text-xs text-white/30">
-              {new Date(trip.requested_at).toLocaleString("vi-VN")}
+              {trip.requested_at ? new Date(trip.requested_at).toLocaleString("vi-VN") : "—"}
             </p>
           </button>
         ))}

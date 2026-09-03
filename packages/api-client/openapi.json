@@ -1,6 +1,64 @@
 {
   "components": {
     "schemas": {
+      "ArrivedRequest": {
+        "description": "Tài xế báo đã tới điểm đón. Toạ độ để đối chiếu — báo đến từ xa 5km là dấu hiệu bất thường.",
+        "properties": {
+          "lat": {
+            "anyOf": [
+              {
+                "maximum": 90.0,
+                "minimum": -90.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
+          },
+          "lng": {
+            "anyOf": [
+              {
+                "maximum": 180.0,
+                "minimum": -180.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lng"
+          }
+        },
+        "title": "ArrivedRequest",
+        "type": "object"
+      },
+      "AssignDriverRequest": {
+        "description": "Điều phối viên gán tài xế thủ công khi matching tự động không ra kết quả.",
+        "properties": {
+          "driver_id": {
+            "format": "uuid",
+            "title": "Driver Id",
+            "type": "string"
+          },
+          "reason": {
+            "examples": [
+              "Khách gọi tổng đài, khu vực thưa tài xế"
+            ],
+            "maxLength": 255,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "driver_id",
+          "reason"
+        ],
+        "title": "AssignDriverRequest",
+        "type": "object"
+      },
       "CancelTripRequest": {
         "properties": {
           "reason": {
@@ -818,8 +876,10 @@
       "OtpRequest": {
         "properties": {
           "phone": {
-            "maxLength": 20,
-            "minLength": 9,
+            "description": "Số điện thoại Việt Nam. Nhận cả 0912345678, +84912345678, 84912345678 và có khoảng trắng — hệ thống tự chuẩn hoá về dạng 0912345678.",
+            "examples": [
+              "0901000001"
+            ],
             "title": "Phone",
             "type": "string"
           }
@@ -884,12 +944,18 @@
             "title": "License Number"
           },
           "otp": {
+            "examples": [
+              "123456"
+            ],
+            "maxLength": 8,
+            "minLength": 4,
             "title": "Otp",
             "type": "string"
           },
           "phone": {
-            "maxLength": 20,
-            "minLength": 9,
+            "examples": [
+              "0901000001"
+            ],
             "title": "Phone",
             "type": "string"
           },
@@ -966,6 +1032,59 @@
         "title": "PartnerType",
         "type": "string"
       },
+      "RateTripRequest": {
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "stars": {
+            "description": "1 đến 5 sao",
+            "examples": [
+              5
+            ],
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Stars",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "stars"
+        ],
+        "title": "RateTripRequest",
+        "type": "object"
+      },
+      "RateTripResponse": {
+        "properties": {
+          "driver_rating_avg": {
+            "title": "Driver Rating Avg",
+            "type": "string"
+          },
+          "driver_total_ratings": {
+            "title": "Driver Total Ratings",
+            "type": "integer"
+          },
+          "rating": {
+            "$ref": "#/components/schemas/TripRatingOut"
+          }
+        },
+        "required": [
+          "rating",
+          "driver_rating_avg",
+          "driver_total_ratings"
+        ],
+        "title": "RateTripResponse",
+        "type": "object"
+      },
       "ReconciliationReportOut": {
         "properties": {
           "balanced": {
@@ -983,6 +1102,10 @@
           "report_date": {
             "format": "date",
             "title": "Report Date",
+            "type": "string"
+          },
+          "total_cancellation_fee": {
+            "title": "Total Cancellation Fee",
             "type": "string"
           },
           "total_driver_payout": {
@@ -1018,6 +1141,7 @@
           "total_driver_payout",
           "total_wallet_credit",
           "total_escrow_accrual",
+          "total_cancellation_fee",
           "fare_payment_diff",
           "payout_wallet_diff",
           "balanced"
@@ -1156,6 +1280,16 @@
         "title": "TokenPair",
         "type": "object"
       },
+      "TripActorType": {
+        "enum": [
+          "rider",
+          "driver",
+          "admin",
+          "system"
+        ],
+        "title": "TripActorType",
+        "type": "string"
+      },
       "TripCreate": {
         "properties": {
           "dropoff": {
@@ -1233,6 +1367,76 @@
         "title": "TripCreateResponse",
         "type": "object"
       },
+      "TripEventOut": {
+        "properties": {
+          "actor_type": {
+            "$ref": "#/components/schemas/TripActorType"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_type": {
+            "$ref": "#/components/schemas/TripEventType"
+          },
+          "from_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TripStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "payload": {
+            "title": "Payload",
+            "type": "object"
+          },
+          "to_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TripStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "event_type",
+          "from_status",
+          "to_status",
+          "actor_type",
+          "payload",
+          "created_at"
+        ],
+        "title": "TripEventOut",
+        "type": "object"
+      },
+      "TripEventType": {
+        "description": "Dấu vết vòng đời chuyến (SPEC 4 — bảng trip_events).\n\nKhác audit_logs (ghi theo REQUEST HTTP): bảng này ghi theo CHUYẾN, kể cả những chuyển\ntrạng thái do hệ thống tự làm — hết hạn matching, job nền. Khi khách khiếu nại \"sao chuyến\ncủa tôi bị huỷ\", đây là thứ CSKH mở ra xem.",
+        "enum": [
+          "created",
+          "matching_started",
+          "offer_sent",
+          "driver_accepted",
+          "driver_assigned_manually",
+          "driver_arrived",
+          "qr_verified",
+          "gps_recorded",
+          "completed",
+          "rated",
+          "cancelled",
+          "no_driver_found",
+          "matching_retried",
+          "fraud_flagged"
+        ],
+        "title": "TripEventType",
+        "type": "string"
+      },
       "TripOut": {
         "properties": {
           "cancellation_fee": {
@@ -1284,6 +1488,18 @@
               }
             ],
             "title": "Distance Km"
+          },
+          "driver_arrived_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Driver Arrived At"
           },
           "driver_id": {
             "anyOf": [
@@ -1463,6 +1679,18 @@
             ],
             "title": "Qr Verified At"
           },
+          "rated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rated At"
+          },
           "requested_at": {
             "anyOf": [
               {
@@ -1523,6 +1751,8 @@
           "insurance_voided",
           "cancellation_fee",
           "qr_verified_at",
+          "driver_arrived_at",
+          "rated_at",
           "requested_at",
           "matched_at",
           "started_at",
@@ -1531,6 +1761,49 @@
           "cancellation_reason"
         ],
         "title": "TripOut",
+        "type": "object"
+      },
+      "TripRatingOut": {
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "driver_id": {
+            "format": "uuid",
+            "title": "Driver Id",
+            "type": "string"
+          },
+          "stars": {
+            "title": "Stars",
+            "type": "integer"
+          },
+          "trip_id": {
+            "format": "uuid",
+            "title": "Trip Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trip_id",
+          "driver_id",
+          "stars",
+          "comment",
+          "created_at"
+        ],
+        "title": "TripRatingOut",
         "type": "object"
       },
       "TripStatus": {
@@ -1542,6 +1815,7 @@
           "qr_verified",
           "in_progress",
           "completed",
+          "rated",
           "cancelled_by_rider",
           "cancelled_by_driver",
           "no_driver_found"
@@ -2681,6 +2955,124 @@
         ]
       }
     },
+    "/api/v1/ops/trips/{trip_id}/assign-driver": {
+      "post": {
+        "description": "Gán tài xế thủ công khi matching tự động không ra kết quả.\n\nBỏ qua bước gửi offer nhưng vẫn đi đúng state machine, và ghi rõ người thao tác cùng\nlý do vào dòng thời gian của chuyến.",
+        "operationId": "ops_assign_driver_api_v1_ops_trips__trip_id__assign_driver_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignDriverRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ops Assign Driver",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/trips/{trip_id}/cancel": {
+      "post": {
+        "description": "CSKH huỷ hộ khi khách gọi tổng đài hoặc tài xế mất liên lạc.\n\nBắt buộc có lý do. Không tính phí huỷ cho khách — nếu tính thì mọi cuộc gọi tổng đài\nđều thành một khoản tranh chấp.",
+        "operationId": "ops_cancel_trip_api_v1_ops_trips__trip_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelTripRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ops Cancel Trip",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
     "/api/v1/partners/qr/{token}": {
       "get": {
         "description": "Endpoint public: mở luồng đặt xe rút gọn với pickup = toạ độ nhà hàng.",
@@ -2767,6 +3159,78 @@
       }
     },
     "/api/v1/trips": {
+      "get": {
+        "description": "Lịch sử chuyến của chính người gọi — khách thấy chuyến mình đặt, tài xế thấy chuyến mình chạy.",
+        "operationId": "list_my_trips_api_v1_trips_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Chỉ lấy chuyến đặt trước mốc này (phân trang)",
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Chỉ lấy chuyến đặt trước mốc này (phân trang)",
+              "title": "Before"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TripOut"
+                  },
+                  "title": "Response List My Trips Api V1 Trips Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List My Trips",
+        "tags": [
+          "trips"
+        ]
+      },
       "post": {
         "operationId": "create_trip_api_v1_trips_post",
         "requestBody": {
@@ -2855,6 +3319,65 @@
           }
         ],
         "summary": "Get Trip",
+        "tags": [
+          "trips"
+        ]
+      }
+    },
+    "/api/v1/trips/{trip_id}/arrived": {
+      "post": {
+        "description": "Tài xế báo đã tới điểm đón.\n\nKhông có mốc này thì app khách hiển thị \"tài xế đã đến\" ngay lúc tài xế mới nhận chuyến\nvà còn cách vài km.",
+        "operationId": "driver_arrived_api_v1_trips__trip_id__arrived_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArrivedRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Driver Arrived",
         "tags": [
           "trips"
         ]
@@ -2976,6 +3499,59 @@
         ]
       }
     },
+    "/api/v1/trips/{trip_id}/events": {
+      "get": {
+        "description": "Dòng thời gian đầy đủ của chuyến — thứ CSKH mở ra khi khách khiếu nại.",
+        "operationId": "trip_timeline_api_v1_trips__trip_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TripEventOut"
+                  },
+                  "title": "Response Trip Timeline Api V1 Trips  Trip Id  Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Trip Timeline",
+        "tags": [
+          "trips"
+        ]
+      }
+    },
     "/api/v1/trips/{trip_id}/gps-history": {
       "get": {
         "operationId": "gps_history_api_v1_trips__trip_id__gps_history_get",
@@ -3074,6 +3650,114 @@
           }
         ],
         "summary": "Gps Ping",
+        "tags": [
+          "trips"
+        ]
+      }
+    },
+    "/api/v1/trips/{trip_id}/rate": {
+      "post": {
+        "description": "Khách đánh giá tài xế — bước cuối vòng đời chuyến, đưa chuyến sang trạng thái `rated`.",
+        "operationId": "rate_trip_api_v1_trips__trip_id__rate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RateTripRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateTripResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rate Trip",
+        "tags": [
+          "trips"
+        ]
+      }
+    },
+    "/api/v1/trips/{trip_id}/retry-matching": {
+      "post": {
+        "description": "Tìm lại tài xế cho chuyến `no_driver_found`, giữ nguyên chuyến cũ.\n\nĐặt lại từ đầu sẽ tạo chuyến mới và mất liên kết với đối tác (QR nhà hàng) của lần đặt đầu.",
+        "operationId": "retry_matching_api_v1_trips__trip_id__retry_matching_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Retry Matching",
         "tags": [
           "trips"
         ]

@@ -15,13 +15,18 @@ pytestmark = [pytest.mark.security, pytest.mark.prd]
 @pytest.mark.parametrize(
     "path,limit,window",
     [
-        ("/api/v1/auth/request-otp", 5, 300),
-        ("/api/v1/auth/verify-otp", 10, 300),
+        ("/api/v1/auth/request-otp", 60, 300),
+        ("/api/v1/auth/verify-otp", 60, 300),
         ("/api/v1/trips", 20, 60),
     ],
 )
-def test_endpoint_ton_tien_co_han_muc_rieng(path, limit, window):
-    """QA-RL-01: OTP không được dùng chung hạn mức 120/phút với endpoint thường."""
+def test_endpoint_nhay_cam_co_han_muc_rieng(path, limit, window):
+    """QA-RL-01: các endpoint nhạy cảm không dùng chung hạn mức mặc định 120/phút.
+
+    Hạn mức theo IP ở đây cố ý ĐỂ RỘNG: nhà mạng di động Việt Nam NAT hàng nghìn thuê bao
+    vào vài IP công cộng, chặn chặt theo IP là chặn nhầm người dùng thật. Hạn mức chặt gắn
+    với chi phí SMS nằm ở tầng nghiệp vụ, tính theo số điện thoại — xem QA-AUTH-13.
+    """
     bucket, got_limit, got_window = rate_mw._resolve_rule(path)
     assert (got_limit, got_window) == (limit, window)
     assert bucket != "default"
@@ -35,20 +40,39 @@ def test_endpoint_thuong_dung_han_muc_mac_dinh():
 
 
 @pytest.mark.api
-async def test_chan_khi_vuot_han_muc_otp(api_client):
-    """QA-RL-02: gửi OTP lần thứ 6 trong 5 phút phải bị chặn.
+async def test_chan_khi_vuot_han_muc_otp_cua_mot_so(api_client):
+    """QA-RL-02: gửi OTP quá nhiều cho CÙNG MỘT SỐ phải bị chặn.
 
-    Đây là bài test bảo vệ tiền thật: mỗi tin SMS là chi phí, và kẻ xấu có thể đốt
-    ngân sách bằng cách gọi liên tục.
+    Bài test bảo vệ tiền thật: mỗi tin SMS là chi phí, và kẻ xấu có thể vừa đốt ngân sách
+    vừa quấy rối chủ số bằng cách gọi liên tục.
     """
+    from app.config import settings
+
     payload = {"phone": "0901000001"}
     codes = []
-    for _ in range(7):
+    for _ in range(settings.OTP_MAX_PER_PHONE_WINDOW + 2):
         resp = await api_client.post("/api/v1/auth/request-otp", json=payload)
         codes.append(resp.status_code)
 
     assert 429 in codes, f"Phải có request bị chặn, nhận được: {codes}"
-    assert codes.index(429) >= 5, "Không được chặn sớm hơn hạn mức đã công bố"
+    assert codes.index(429) == settings.OTP_MAX_PER_PHONE_WINDOW, (
+        f"Phải chặn đúng sau {settings.OTP_MAX_PER_PHONE_WINDOW} lượt, nhận được: {codes}"
+    )
+
+
+@pytest.mark.api
+async def test_han_muc_mot_so_khong_anh_huong_so_khac(api_client):
+    """QA-RL-05: hai người dùng khác nhau không được chặn lẫn nhau.
+
+    Đây chính là điều hạn mức theo IP làm sai: cả quán cà phê dùng chung một IP.
+    """
+    from app.config import settings
+
+    for _ in range(settings.OTP_MAX_PER_PHONE_WINDOW + 1):
+        await api_client.post("/api/v1/auth/request-otp", json={"phone": "0901000001"})
+
+    resp = await api_client.post("/api/v1/auth/request-otp", json={"phone": "0902000002"})
+    assert resp.status_code == 200
 
 
 @pytest.mark.api

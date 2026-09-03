@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.constants import TimeBand, TripStatus
+from app.core.constants import TimeBand, TripActorType, TripEventType, TripStatus
 from app.domains.pricing.schemas import Coordinate, FareBreakdown
 
 
@@ -43,6 +43,8 @@ class TripOut(BaseModel):
     insurance_voided: bool
     cancellation_fee: Decimal
     qr_verified_at: datetime | None
+    driver_arrived_at: datetime | None
+    rated_at: datetime | None
     requested_at: datetime | None
     matched_at: datetime | None
     started_at: datetime | None
@@ -90,3 +92,51 @@ class GpsPointOut(BaseModel):
     lat: float
     lng: float
     recorded_at: datetime
+
+
+class ArrivedRequest(BaseModel):
+    """Tài xế báo đã tới điểm đón. Toạ độ để đối chiếu — báo đến từ xa 5km là dấu hiệu bất thường."""
+
+    lat: float | None = Field(default=None, ge=-90, le=90)
+    lng: float | None = Field(default=None, ge=-180, le=180)
+
+
+class RateTripRequest(BaseModel):
+    stars: int = Field(ge=1, le=5, description="1 đến 5 sao", examples=[5])
+    comment: str | None = Field(default=None, max_length=500)
+
+
+class TripRatingOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    trip_id: uuid.UUID
+    driver_id: uuid.UUID
+    stars: int
+    comment: str | None
+    created_at: datetime
+
+
+class RateTripResponse(BaseModel):
+    rating: TripRatingOut
+    driver_rating_avg: Decimal
+    driver_total_ratings: int
+
+
+class TripEventOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    event_type: TripEventType
+    from_status: TripStatus | None
+    to_status: TripStatus | None
+    actor_type: TripActorType
+    payload: dict
+    created_at: datetime
+
+
+class AssignDriverRequest(BaseModel):
+    """Điều phối viên gán tài xế thủ công khi matching tự động không ra kết quả."""
+
+    driver_id: uuid.UUID
+    reason: str = Field(
+        min_length=3, max_length=255, examples=["Khách gọi tổng đài, khu vực thưa tài xế"]
+    )

@@ -46,6 +46,37 @@ uvicorn app.main:app --reload --port 8000     # http://localhost:8000/docs
 docker compose up -d postgres redis && alembic upgrade head
 ```
 
+## Chạy thử end-to-end (smoke test)
+
+Kiểm chứng cả hệ thống đang chạy thật, không phải test in-process. QA chạy trước mỗi release.
+
+```bash
+# cửa sổ 1 — cần Redis đang chạy
+cd services/api && source .venv/bin/activate
+uvicorn app.main:app --port 8000
+
+# cửa sổ 2
+cd services/api && source .venv/bin/activate
+make smoke
+```
+
+22 bước: sức khoẻ hệ thống · đăng nhập OTP · báo giá · tài xế lên ca sinh QR · đặt chuyến ·
+khử trùng request · ghép chuyến · quét QR sai/đúng · ghi GPS · chốt cước và trích ký quỹ ·
+ví · xoay vòng refresh token · chặn spam OTP · audit log che PII.
+
+## Rà soát toàn bộ API (quét ngang)
+
+`make smoke` đi MỘT luồng nghiệp vụ. `make audit` gọi MỌI endpoint ít nhất một lần bằng đúng
+vai trò, kèm các trường hợp phải bị từ chối — sai vai trò 403, dữ liệu sai 422, không tồn tại 404.
+
+```bash
+cd services/api && source .venv/bin/activate
+python -m scripts.create_admin 0900000000 "Quản trị viên"   # chỉ cần lần đầu
+make audit
+```
+
+62 lời gọi trên 34 đường dẫn. Chạy lại được nhiều lần (tự dọn bộ đếm hạn mức của chính nó).
+
 ## Kiểm thử & chất lượng
 
 ```bash

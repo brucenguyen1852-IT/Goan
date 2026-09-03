@@ -84,6 +84,11 @@ class ReconciliationReport(Base, TimestampMixin):
     total_escrow_accrual: Mapped[Decimal] = mapped_column(
         Money, default=Decimal("0"), nullable=False
     )
+    # Phí huỷ chuyến muộn: khách trả, tài xế nhận. Không nằm trong final_fare (chuyến bị
+    # huỷ nên không có cước) nhưng vẫn là tiền chạy qua hệ thống, phải vào đối soát.
+    total_cancellation_fee: Mapped[Decimal] = mapped_column(
+        Money, default=Decimal("0"), nullable=False
+    )
     fare_payment_diff: Mapped[Decimal] = mapped_column(Money, default=Decimal("0"), nullable=False)
     payout_wallet_diff: Mapped[Decimal] = mapped_column(Money, default=Decimal("0"), nullable=False)
     balanced: Mapped[bool] = mapped_column(default=True, nullable=False)

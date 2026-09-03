@@ -132,3 +132,178 @@ async def test_ttl_ho_token_theo_cau_hinh(fake_redis):
     await token_store.revoke_family(fake_redis, "fam-x")
     assert await token_store.is_family_revoked(fake_redis, "fam-x") is True
     assert await token_store.is_family_revoked(fake_redis, "fam-khac") is False
+
+
+# --- QA-SEC-REG — chặn tự đăng ký thành admin (PRD-SEC-11) ------------------
+
+
+@pytest.mark.integration
+async def test_khong_the_tu_dang_ky_thanh_admin(db, fake_redis):
+    """QA-AUTH-10: lỗ hổng leo thang đặc quyền — bài test quan trọng nhất của module auth.
+
+    Trước khi sửa: bất kỳ ai gửi role="admin" kèm một số điện thoại bất kỳ đều nhận được
+    token admin, rồi đọc toàn bộ hồ sơ gian lận, báo cáo đối soát, và quyết định được các
+    vụ gian lận — tức là khoá tài xế và giữ ký quỹ của họ. Đã kiểm chứng trên server thật.
+    """
+    from app.core.constants import UserRole
+    from app.core.exceptions import PermissionDeniedError
+
+    await auth_service.request_otp(fake_redis, "0988000001")
+    otp = await fake_redis.get("otp:0988000001")
+
+    with pytest.raises(PermissionDeniedError):
+        await auth_service.verify_otp_and_login(
+            db,
+            fake_redis,
+            phone="0988000001",
+            otp=otp,
+            full_name="Kẻ tấn công",
+            role=UserRole.ADMIN,
+            license_number=None,
+        )
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("role_name", ["rider", "driver"])
+async def test_van_dang_ky_duoc_vai_tro_cong_khai(db, fake_redis, role_name):
+    """QA-AUTH-11: chặn admin nhưng không được chặn nhầm khách và tài xế."""
+    from app.core.constants import UserRole
+
+    phone = "0977000001" if role_name == "rider" else "0977000002"
+    await auth_service.request_otp(fake_redis, phone)
+    otp = await fake_redis.get(f"otp:{phone}")
+
+    user, tokens = await auth_service.verify_otp_and_login(
+        db,
+        fake_redis,
+        phone=phone,
+        otp=otp,
+        full_name="Người dùng thật",
+        role=UserRole(role_name),
+        license_number="B2-999999" if role_name == "driver" else None,
+    )
+
+    assert user.role is UserRole(role_name)
+    assert tokens.access_token
+
+
+@pytest.mark.integration
+async def test_admin_da_ton_tai_van_dang_nhap_binh_thuong(db, fake_redis):
+    """QA-AUTH-12: vai trò lấy từ CSDL, không lấy từ dữ liệu client gửi lên.
+
+    Admin đăng nhập mà khai role="rider" thì vẫn là admin; ngược lại khách khai
+    role="admin" cũng không lên được admin.
+    """
+    from app.core.constants import UserRole
+    from app.domains.users.models import User
+
+    admin = User(phone="0900000000", full_name="Quản trị viên", role=UserRole.ADMIN)
+    db.add(admin)
+    await db.commit()
+
+    await auth_service.request_otp(fake_redis, "0900000000")
+    otp = await fake_redis.get("otp:0900000000")
+    user, _ = await auth_service.verify_otp_and_login(
+        db,
+        fake_redis,
+        phone="0900000000",
+        otp=otp,
+        full_name=None,
+        role=UserRole.RIDER,
+        license_number=None,
+    )
+
+    assert user.role is UserRole.ADMIN
+
+
+# --- QA-OTP — hạn mức theo số điện thoại (PRD-SEC-10) ----------------------
+
+
+@pytest.mark.integration
+async def test_han_muc_otp_theo_so_dien_thoai(db, fake_redis):
+    """QA-AUTH-13: hạn mức gắn với SỐ, không gắn với IP.
+
+    Hạn mức theo IP không dùng được ở Việt Nam: nhà mạng NAT hàng nghìn thuê bao vào vài
+    IP công cộng, nên chặn theo IP là chặn nhầm người dùng thật, còn kẻ tấn công đổi IP
+    là lách được. Thứ gắn với chi phí SMS là số điện thoại.
+    """
+    from app.config import settings
+    from app.core.exceptions import RateLimitedError
+
+    for _ in range(settings.OTP_MAX_PER_PHONE_WINDOW):
+        await auth_service.request_otp(fake_redis, "0912345678")
+
+    with pytest.raises(RateLimitedError):
+        await auth_service.request_otp(fake_redis, "0912345678")
+
+    # Số khác không bị ảnh hưởng
+    assert await auth_service.request_otp(fake_redis, "0912345679")
+
+
+@pytest.mark.integration
+async def test_dang_ky_thieu_thong_tin_khong_lam_mat_otp(db, fake_redis):
+    """QA-AUTH-14: gõ đúng mã nhưng thiếu họ tên thì KHÔNG được đốt mất mã.
+
+    Mỗi mã là một tin SMS tốn tiền và hạn mức chỉ 3 lượt mỗi 5 phút. Nếu mã bị tiêu ngay
+    cả khi đăng ký lỗi, người dùng quên điền một ô là phải chờ và tốn thêm một tin.
+    """
+    from app.core.constants import UserRole
+    from app.core.exceptions import AppError
+
+    await auth_service.request_otp(fake_redis, "0966000001")
+    otp = await fake_redis.get("otp:0966000001")
+
+    with pytest.raises(AppError):
+        await auth_service.verify_otp_and_login(
+            db,
+            fake_redis,
+            phone="0966000001",
+            otp=otp,
+            full_name=None,
+            role=UserRole.RIDER,
+            license_number=None,
+        )
+
+    # Mã vẫn còn dùng được cho lần thử tiếp theo
+    user, _ = await auth_service.verify_otp_and_login(
+        db,
+        fake_redis,
+        phone="0966000001",
+        otp=otp,
+        full_name="Nguyễn Văn A",
+        role=UserRole.RIDER,
+        license_number=None,
+    )
+    assert user.phone == "0966000001"
+
+
+@pytest.mark.integration
+async def test_tai_xe_thieu_bang_lai_bi_tu_choi_truoc_khi_tieu_otp(db, fake_redis):
+    """QA-AUTH-15: tài xế quên số bằng lái cũng không bị mất mã."""
+    from app.core.constants import UserRole
+    from app.core.exceptions import AppError
+
+    await auth_service.request_otp(fake_redis, "0966000002")
+    otp = await fake_redis.get("otp:0966000002")
+
+    with pytest.raises(AppError):
+        await auth_service.verify_otp_and_login(
+            db,
+            fake_redis,
+            phone="0966000002",
+            otp=otp,
+            full_name="Tài Xế Mới",
+            role=UserRole.DRIVER,
+            license_number=None,
+        )
+
+    user, _ = await auth_service.verify_otp_and_login(
+        db,
+        fake_redis,
+        phone="0966000002",
+        otp=otp,
+        full_name="Tài Xế Mới",
+        role=UserRole.DRIVER,
+        license_number="B2-123456",
+    )
+    assert user.role is UserRole.DRIVER

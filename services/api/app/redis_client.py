@@ -9,6 +9,7 @@ _pool = ConnectionPool.from_url(settings.REDIS_URL, decode_responses=True)
 # Key namespace tập trung để tránh trùng key giữa các domain.
 DRIVER_GEO_KEY = "driver_locations"
 OTP_KEY = "otp:{phone}"
+OTP_QUOTA_KEY = "otp:quota:{phone}:{window}"
 TRIP_LOCK_KEY = "trip:{trip_id}:lock"
 TRIP_OFFER_KEY = "trip:{trip_id}:offers"
 TRIP_EVENTS_CHANNEL = "trip:{trip_id}:events"

@@ -45,6 +45,7 @@ class ReconciliationReportOut(BaseModel):
     total_driver_payout: Decimal
     total_wallet_credit: Decimal
     total_escrow_accrual: Decimal
+    total_cancellation_fee: Decimal
     fare_payment_diff: Decimal
     payout_wallet_diff: Decimal
     balanced: bool

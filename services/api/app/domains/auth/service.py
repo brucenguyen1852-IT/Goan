@@ -7,7 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.constants import UserRole, UserStatus
-from app.core.exceptions import AppError, PermissionDeniedError, UnauthorizedError
+from app.core.exceptions import (
+    AppError,
+    PermissionDeniedError,
+    RateLimitedError,
+    UnauthorizedError,
+)
 from app.core.logging import log_event
 from app.core.security import (
     REFRESH_TOKEN,
@@ -22,12 +27,44 @@ from app.domains.auth import tokens as token_store
 from app.domains.auth.schemas import TokenPair
 from app.domains.users import repository as users_repo
 from app.domains.users.models import DriverProfile, User
-from app.redis_client import OTP_KEY
+from app.redis_client import OTP_KEY, OTP_QUOTA_KEY
 
 logger = logging.getLogger("goan.auth")
 
+# Vai trò được phép tạo qua đăng ký công khai bằng SĐT + OTP.
+# ADMIN cố ý KHÔNG nằm trong danh sách này.
+PUBLIC_SIGNUP_ROLES = frozenset({UserRole.RIDER, UserRole.DRIVER})
+
+
+async def _consume_otp_quota(redis: Redis, phone: str) -> None:
+    """Chặn gửi OTP quá nhiều cho CÙNG MỘT SỐ.
+
+    Mỗi tin nhắn là chi phí thật, và kẻ xấu có thể dùng số của người khác để quấy rối họ.
+    Redis lỗi thì cho qua — mất hạn mức còn hơn không ai đăng nhập được.
+    """
+    windows = (
+        ("5m", settings.OTP_PHONE_WINDOW_SECONDS, settings.OTP_MAX_PER_PHONE_WINDOW),
+        ("1d", 86400, settings.OTP_MAX_PER_PHONE_DAY),
+    )
+    for name, ttl, limit in windows:
+        key = OTP_QUOTA_KEY.format(phone=phone, window=name)
+        try:
+            count = await redis.incr(key)
+            if count == 1:
+                await redis.expire(key, ttl)
+        except Exception:
+            logger.warning("Redis lỗi khi tính hạn mức OTP, cho qua", exc_info=True)
+            return
+        if count > limit:
+            log_event(logger, "otp_quota_exceeded", phone=phone, window=name)
+            raise RateLimitedError(
+                "Bạn đã yêu cầu mã quá nhiều lần. Vui lòng thử lại sau ít phút.",
+                details={"window": name, "limit": limit},
+            )
+
 
 async def request_otp(redis: Redis, phone: str) -> str:
+    await _consume_otp_quota(redis, phone)
     otp = generate_otp()
     await redis.set(OTP_KEY.format(phone=phone), otp, ex=settings.OTP_TTL_SECONDS)
     # Không log OTP ra plaintext ở production.
@@ -57,27 +94,54 @@ async def verify_otp_and_login(
     role: UserRole,
     license_number: str | None,
 ) -> tuple[User, TokenPair]:
+    """Xác thực OTP rồi đăng nhập, hoặc đăng ký nếu số này chưa có tài khoản.
+
+    Thứ tự có chủ ý: kiểm tra dữ liệu TRƯỚC khi tiêu OTP. Nếu tiêu trước rồi mới báo lỗi
+    "thiếu họ tên" thì người dùng phải xin mã mới dù họ vừa gõ đúng mã — mà mỗi mã là một
+    tin SMS tốn tiền và hạn mức chỉ 3 lượt mỗi 5 phút.
+    """
+    user = await users_repo.get_user_by_phone(db, phone)
+
+    if user is None:
+        _validate_signup(phone, role, full_name, license_number)
+    elif user.status is UserStatus.BANNED:
+        # Từ chối trước khi tiêu OTP: tài khoản bị khoá thì mã còn hay hết đều không đổi
+        # kết quả, và không nên đốt mã của họ.
+        raise PermissionDeniedError("Tài khoản đã bị khoá")
+
     await _consume_otp(redis, phone, otp)
 
-    user = await users_repo.get_user_by_phone(db, phone)
     if user is None:
-        if not full_name:
-            raise AppError("Cần full_name khi đăng ký lần đầu")
-        user = User(phone=phone, full_name=full_name, role=role)
+        user = User(phone=phone, full_name=full_name or "", role=role)
         db.add(user)
         await db.flush()
         if role is UserRole.DRIVER:
-            if not license_number:
-                raise AppError("Tài xế cần license_number khi đăng ký")
-            db.add(DriverProfile(user_id=user.id, license_number=license_number))
+            db.add(DriverProfile(user_id=user.id, license_number=license_number or ""))
         await db.commit()
         await db.refresh(user)
         log_event(logger, "user_registered", user_id=str(user.id), role=role.value)
 
-    if user.status is UserStatus.BANNED:
-        raise PermissionDeniedError("Tài khoản đã bị khoá")
-
     return user, await issue_tokens(redis, user)
+
+
+def _validate_signup(
+    phone: str, role: UserRole, full_name: str | None, license_number: str | None
+) -> None:
+    """Kiểm tra điều kiện đăng ký. Tách riêng để gọi được trước khi tiêu OTP."""
+    # Đăng ký công khai CHỈ được tạo tài khoản khách hoặc tài xế.
+    # Không có kiểm tra này thì bất kỳ ai gửi role="admin" cũng thành quản trị viên, đọc
+    # được toàn bộ hồ sơ gian lận và báo cáo đối soát, và quyết định được các vụ gian lận —
+    # tức là khoá tài xế và giữ ký quỹ của họ.
+    # Tài khoản nội bộ chỉ tạo bằng `python -m scripts.create_admin` trên máy chủ.
+    if role not in PUBLIC_SIGNUP_ROLES:
+        log_event(logger, "signup_role_rejected", phone=phone, requested_role=role.value)
+        raise PermissionDeniedError(
+            "Không thể tự đăng ký với vai trò này. Tài khoản nội bộ do quản trị viên tạo."
+        )
+    if not full_name:
+        raise AppError("Cần full_name khi đăng ký lần đầu")
+    if role is UserRole.DRIVER and not license_number:
+        raise AppError("Tài xế cần license_number khi đăng ký")
 
 
 async def issue_tokens(redis: Redis, user: User, *, family: str | None = None) -> TokenPair:

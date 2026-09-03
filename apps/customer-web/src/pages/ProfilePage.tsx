@@ -1,14 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
+import { logout as logoutRemote } from "@/api/auth";
 import { useAuthStore } from "@/store/authStore";
 
 export function ProfilePage() {
   const navigate = useNavigate();
   const phone = useAuthStore((s) => s.phone);
-  const logout = useAuthStore((s) => s.logout);
-
-  function handleLogout() {
-    logout();
+  // Đăng xuất phải gọi backend: chỉ xoá token trong máy thì refresh token vẫn sống 30 ngày
+  // ở phía server và ai lấy được vẫn dùng tiếp được.
+  async function handleLogout() {
+    await logoutRemote();
     navigate("/login", { replace: true });
   }
 

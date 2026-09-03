@@ -18,7 +18,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.constants import OnlineStatus, TripStatus, UserStatus
+from app.core.constants import (
+    OnlineStatus,
+    TripActorType,
+    TripEventType,
+    TripStatus,
+    UserStatus,
+)
 from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError
 from app.core.geo import haversine_km
 from app.core.logging import log_event
@@ -26,6 +32,7 @@ from app.core.money import vnd
 from app.domains.notifications import service as notifications
 from app.domains.partners import service as partners_service
 from app.domains.pricing import service as pricing_service
+from app.domains.trips import events as trip_events
 from app.domains.trips.models import Trip
 from app.domains.trips.state_machine import assert_transition
 from app.domains.users import repository as users_repo
@@ -86,6 +93,13 @@ async def start_matching(db: AsyncSession, redis: Redis, trip: Trip) -> list[Nea
     """requested -> matching, rồi broadcast offer cho N tài xế gần nhất."""
     if trip.status is TripStatus.REQUESTED:
         assert_transition(trip.status, TripStatus.MATCHING)
+        await trip_events.record(
+            db,
+            trip.id,
+            TripEventType.MATCHING_STARTED,
+            from_status=trip.status,
+            to_status=TripStatus.MATCHING,
+        )
         trip.status = TripStatus.MATCHING
         await db.commit()
 
@@ -108,6 +122,14 @@ async def start_matching(db: AsyncSession, redis: Redis, trip: Trip) -> list[Nea
         estimated_fare=str(trip.estimated_fare or 0),
         expires_in_sec=settings.MATCHING_OFFER_TTL_SECONDS,
     )
+    await trip_events.record(
+        db,
+        trip.id,
+        TripEventType.OFFER_SENT,
+        driver_count=len(drivers),
+        nearest_km=str(drivers[0].distance_km) if drivers else None,
+    )
+    await db.commit()
     log_event(logger, "trip_offers_sent", trip_id=str(trip.id), drivers=len(drivers))
     return drivers
 
@@ -174,6 +196,16 @@ async def accept_offer(
 
     # matched -> driver_arriving là bước tự động (SPEC 5.1).
     assert_transition(trip.status, TripStatus.DRIVER_ARRIVING)
+    await trip_events.record(
+        db,
+        trip.id,
+        TripEventType.DRIVER_ACCEPTED,
+        from_status=TripStatus.MATCHED,
+        to_status=TripStatus.DRIVER_ARRIVING,
+        actor_type=TripActorType.DRIVER,
+        actor_id=driver_user_id,
+        driver_to_pickup_km=str(trip.driver_to_pickup_distance_km or ""),
+    )
     trip.status = TripStatus.DRIVER_ARRIVING
     await db.commit()
     await redis.delete(offer_key)
@@ -206,6 +238,14 @@ async def mark_no_driver_found(db: AsyncSession, trip: Trip) -> Trip:
     """Hết 90s không ai nhận -> no_driver_found (có thể retry hoặc trợ cấp)."""
     if trip.status is TripStatus.MATCHING:
         assert_transition(trip.status, TripStatus.NO_DRIVER_FOUND)
+        await trip_events.record(
+            db,
+            trip.id,
+            TripEventType.NO_DRIVER_FOUND,
+            from_status=trip.status,
+            to_status=TripStatus.NO_DRIVER_FOUND,
+            radius_steps_km=settings.MATCHING_RADIUS_STEPS_KM,
+        )
         trip.status = TripStatus.NO_DRIVER_FOUND
         await db.commit()
         await notifications.notify_user(
@@ -226,3 +266,109 @@ async def expire_stale_matching_trips(db: AsyncSession) -> int:
     for trip in trips:
         await mark_no_driver_found(db, trip)
     return len(trips)
+
+
+async def retry_matching(db: AsyncSession, redis: Redis, trip: Trip, rider_id: uuid.UUID) -> Trip:
+    """Tìm lại tài xế cho chuyến đã `no_driver_found`.
+
+    Không bắt khách đặt lại từ đầu: đặt lại sẽ tạo chuyến mới, mất lịch sử và mất cả liên
+    kết với đối tác (QR nhà hàng) của lần đặt đầu.
+    """
+    if trip.rider_id != rider_id:
+        raise PermissionDeniedError("Chỉ khách của chuyến mới được tìm lại tài xế")
+    if trip.status is not TripStatus.NO_DRIVER_FOUND:
+        raise ConflictError("Chỉ tìm lại được khi chuyến đang ở trạng thái không tìm thấy tài xế")
+
+    await trip_events.record(
+        db,
+        trip.id,
+        TripEventType.MATCHING_RETRIED,
+        from_status=trip.status,
+        to_status=TripStatus.MATCHING,
+        actor_type=TripActorType.RIDER,
+        actor_id=rider_id,
+    )
+    assert_transition(trip.status, TripStatus.MATCHING)
+    trip.status = TripStatus.MATCHING
+    trip.requested_at = datetime.now(timezone.utc)  # tính lại hạn 90 giây từ lúc thử lại
+    await db.commit()
+
+    await start_matching(db, redis, trip)
+    return trip
+
+
+async def assign_driver_manually(
+    db: AsyncSession,
+    redis: Redis,
+    trip: Trip,
+    driver_user_id: uuid.UUID,
+    admin_id: uuid.UUID,
+    reason: str,
+) -> Trip:
+    """Điều phối viên gán tài xế thủ công (Live Ops).
+
+    Dùng khi matching tự động không ra kết quả nhưng tổng đài biết có tài xế nhận được —
+    khu vực thưa, giờ thấp điểm, hoặc khách gọi điện đặt hộ. Bỏ qua bước offer nhưng VẪN đi
+    qua đúng state machine và vẫn ghi dấu vết, kèm người thao tác và lý do.
+    """
+    if trip.status not in {TripStatus.MATCHING, TripStatus.NO_DRIVER_FOUND}:
+        raise ConflictError("Chỉ gán tài xế khi chuyến đang tìm hoặc không tìm được tài xế")
+
+    profile = await users_repo.get_driver_profile_by_user(db, driver_user_id)
+    if profile is None:
+        raise NotFoundError("Không tìm thấy hồ sơ tài xế")
+    if not _is_eligible(profile):
+        raise ConflictError(
+            "Tài xế không đủ điều kiện nhận chuyến (đang bận, đã tắt ca, hoặc bị hạn chế)"
+        )
+
+    if trip.status is TripStatus.NO_DRIVER_FOUND:
+        assert_transition(trip.status, TripStatus.MATCHING)
+        trip.status = TripStatus.MATCHING
+
+    await redis.set(
+        TRIP_LOCK_KEY.format(trip_id=trip.id),
+        str(driver_user_id),
+        ex=settings.MATCHING_TIMEOUT_SECONDS,
+    )
+    assert_transition(trip.status, TripStatus.MATCHED)
+    trip.driver_id = driver_user_id
+    trip.status = TripStatus.MATCHED
+    trip.matched_at = datetime.now(timezone.utc)
+    profile.online_status = OnlineStatus.ON_TRIP
+    await db.flush()
+
+    await trip_events.record(
+        db,
+        trip.id,
+        TripEventType.DRIVER_ASSIGNED_MANUALLY,
+        from_status=TripStatus.MATCHING,
+        to_status=TripStatus.DRIVER_ARRIVING,
+        actor_type=TripActorType.ADMIN,
+        actor_id=admin_id,
+        driver_id=str(driver_user_id),
+        reason=reason,
+    )
+    assert_transition(trip.status, TripStatus.DRIVER_ARRIVING)
+    trip.status = TripStatus.DRIVER_ARRIVING
+    await db.commit()
+
+    await notifications.notify_users(
+        [trip.rider_id, driver_user_id],
+        ServerEvent.TRIP_MATCHED,
+        trip_id=str(trip.id),
+        driver={
+            "id": str(driver_user_id),
+            "name": profile.user.full_name if profile.user else None,
+        },
+        assigned_by_ops=True,
+    )
+    log_event(
+        logger,
+        "trip_driver_assigned_manually",
+        trip_id=str(trip.id),
+        driver_id=str(driver_user_id),
+        admin_id=str(admin_id),
+        reason=reason,
+    )
+    return trip

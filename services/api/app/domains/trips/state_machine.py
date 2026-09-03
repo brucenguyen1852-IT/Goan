@@ -27,7 +27,8 @@ ALLOWED_TRANSITIONS: dict[TripStatus, frozenset[TripStatus]] = {
     ),
     TripStatus.QR_VERIFIED: frozenset({TripStatus.IN_PROGRESS}),
     TripStatus.IN_PROGRESS: frozenset({TripStatus.COMPLETED, TripStatus.CANCELLED_BY_DRIVER}),
-    TripStatus.COMPLETED: frozenset(),
+    TripStatus.COMPLETED: frozenset({TripStatus.RATED}),
+    TripStatus.RATED: frozenset(),
     TripStatus.CANCELLED_BY_RIDER: frozenset(),
     TripStatus.CANCELLED_BY_DRIVER: frozenset(),
     TripStatus.NO_DRIVER_FOUND: frozenset({TripStatus.MATCHING}),  # cho phép retry tìm tài xế
