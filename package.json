@@ -1,0 +1,19 @@
+{
+  "name": "goan",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "api:openapi": "python3 services/api/scripts/export_openapi.py packages/api-client/openapi.json",
+    "api:client": "pnpm api:openapi && pnpm --filter @goan/api-client generate"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.3",
+    "typescript": "^5.5.4"
+  }
+}

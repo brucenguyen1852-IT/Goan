@@ -1,0 +1,74 @@
+[project]
+name = "goan-api"
+version = "1.0.0"
+description = "GoAn — backend duy nhất cho app khách, app tài xế, Console, Partner Portal và website"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+addopts = "--strict-markers"
+markers = [
+  "unit: hàm thuần, không DB, không mạng — phải chạy dưới 1 giây",
+  "integration: có DB (SQLite in-memory) hoặc nhiều lớp phối hợp",
+  "api: gọi qua HTTP client, kiểm tra cả middleware và mã trạng thái",
+  "security: phân quyền, token, chống lạm dụng",
+  "money: mọi thứ chạm tiền — cước, ví, ký quỹ, đối soát. Không bao giờ được đỏ",
+  "prd: có ánh xạ tới một mục PRD trong docs/QA/TRACEABILITY.md",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/workers/*", "alembic/*", "scripts/*"]
+
+[tool.coverage.report]
+skip_empty = true
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+  "\\.\\.\\.",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [".venv", "__pycache__"]
+
+[tool.ruff.lint]
+select = [
+  "E",    # pycodestyle
+  "F",    # pyflakes
+  "I",    # isort
+  "UP",   # pyupgrade
+  "B",    # bugbear
+  "C4",   # comprehensions
+  "SIM",  # simplify
+  "ASYNC",
+]
+ignore = [
+  "B008",   # Depends() trong tham số mặc định là chuẩn của FastAPI
+  "E501",   # độ dài dòng đã do formatter lo
+  "UP042",  # giữ (str, Enum): đổi sang StrEnum làm đổi hành vi str() và ảnh hưởng cột Enum của SQLAlchemy
+  "UP017",  # giữ timezone.utc thay vì datetime.UTC: chỉ là cú pháp, nhưng datetime.UTC cần Python >= 3.11
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
+
+[tool.mypy]
+python_version = "3.11"
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+exclude = "(^\\.venv/|^alembic/versions/)"
+
+# Siết dần theo từng domain. Đã đạt strict:
+[[tool.mypy.overrides]]
+module = ["app.core.*", "app.domains.pricing.*", "app.domains.escrow.*"]
+disallow_untyped_defs = true

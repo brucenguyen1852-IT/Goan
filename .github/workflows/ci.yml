@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (services/api)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: services/api/requirements.txt
+
+      - name: Cài dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install ruff mypy pytest-cov
+
+      - name: Lint (ruff)
+        run: ruff check app tests
+
+      - name: Kiểm tra định dạng
+        run: ruff format --check app tests
+
+      - name: Type check (mypy)
+        run: mypy app
+
+      - name: Test + ngưỡng độ phủ
+        run: pytest -q --cov=app --cov-report=term-missing --cov-fail-under=75
+
+      - name: Nhóm test chạm tiền (không bao giờ được đỏ)
+        run: pytest -m money -q
+
+      - name: Nhóm test bảo mật
+        run: pytest -m security -q
+
+  migration-check:
+    name: Model khớp migration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: goan
+          POSTGRES_PASSWORD: goan
+          POSTGRES_DB: goan
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: services/api/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+asyncpg://goan:goan@localhost:5432/goan
+        run: alembic upgrade head
+      - name: Sửa model mà quên migration thì đỏ ở đây
+        env:
+          DATABASE_URL: postgresql+asyncpg://goan:goan@localhost:5432/goan
+        run: alembic check
+
+  api-contract:
+    name: OpenAPI khớp api-client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: services/api/requirements.txt
+      - run: pip install -r services/api/requirements.txt
+      - name: Sinh lại OpenAPI
+        run: python services/api/scripts/export_openapi.py /tmp/openapi.json
+      - name: So với bản đã commit
+        run: |
+          if [ -f packages/api-client/openapi.json ]; then
+            diff -u packages/api-client/openapi.json /tmp/openapi.json \
+              || { echo "::error::API đã đổi nhưng chưa sinh lại client. Chạy: make -C services/api openapi"; exit 1; }
+          else
+            echo "Chưa có packages/api-client — bỏ qua ở giai đoạn này."
+          fi
+
+  frontend:
+    name: Frontend (apps/*)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Sinh API client từ OpenAPI đã commit
+        run: pnpm --filter @goan/api-client generate
+      - run: pnpm --filter @goan/api-client typecheck
+      - run: pnpm build
