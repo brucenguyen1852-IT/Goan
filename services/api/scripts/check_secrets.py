@@ -53,6 +53,10 @@ PLACEHOLDERS = re.compile(
 SKIP_SUFFIXES = (".enc", ".lock", ".png", ".jpg", ".pdf", ".xlsx", ".ico", ".woff", ".woff2")
 SKIP_DIRS = ("node_modules/", "dist/", ".venv/", "htmlcov/")
 
+# Chính file này chứa các mẫu nhận dạng secret, nên nó luôn tự khớp với chính mình. Bỏ qua
+# đúng nó, không bỏ qua cả thư mục scripts/ — script khác vẫn phải bị quét.
+SELF = "services/api/scripts/check_secrets.py"
+
 
 def tracked_files(staged: bool) -> list[str]:
     cmd = (
@@ -70,7 +74,7 @@ def tracked_files(staged: bool) -> list[str]:
 def scan(paths: list[str]) -> list[str]:
     problems: list[str] = []
     for rel in paths:
-        if any(rel.startswith(d) or f"/{d}" in rel for d in SKIP_DIRS):
+        if rel == SELF or any(rel.startswith(d) or f"/{d}" in rel for d in SKIP_DIRS):
             continue
         name = Path(rel).name
         if FORBIDDEN_NAMES.search(rel) and name not in ALLOWED_ENV:
