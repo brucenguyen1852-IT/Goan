@@ -12,7 +12,7 @@ from __future__ import annotations
 import time
 import uuid
 
-from fastapi import Request
+from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
@@ -38,7 +38,7 @@ def _resolve_rule(path: str) -> tuple[str, int, int]:
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if request.scope["type"] != "http" or request.url.path in EXEMPT_PATHS:
             return await call_next(request)
 

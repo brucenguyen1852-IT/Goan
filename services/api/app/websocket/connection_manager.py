@@ -13,6 +13,7 @@ from collections import defaultdict
 from typing import Any
 
 from fastapi import WebSocket
+from redis.asyncio.client import PubSub
 
 from app.core.logging import log_event
 from app.redis_client import USER_EVENTS_CHANNEL, get_redis
@@ -24,7 +25,7 @@ class ConnectionManager:
     def __init__(self) -> None:
         self._connections: dict[str, set[WebSocket]] = defaultdict(set)
         self._listener_task: asyncio.Task | None = None
-        self._pubsub = None
+        self._pubsub: PubSub | None = None
         self._lock = asyncio.Lock()
 
     async def connect(self, user_id: uuid.UUID | str, websocket: WebSocket) -> None:

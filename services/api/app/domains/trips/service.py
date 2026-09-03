@@ -243,7 +243,12 @@ async def complete_trip(
             await db.commit()
         raise ConflictError("Chuyến chưa ở trạng thái đang chạy")
 
-    if lat is not None and lng is not None and trip.dropoff_lat is not None:
+    if (
+        lat is not None
+        and lng is not None
+        and trip.dropoff_lat is not None
+        and trip.dropoff_lng is not None
+    ):
         distance_to_dropoff = haversine_m(lat, lng, trip.dropoff_lat, trip.dropoff_lng)
         if distance_to_dropoff > settings.TRIP_COMPLETE_RADIUS_M:
             raise ConflictError(

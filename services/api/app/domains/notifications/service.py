@@ -6,6 +6,7 @@ nên mọi lỗi gửi đều được nuốt và ghi log.
 
 import logging
 import uuid
+from collections.abc import Sequence
 from typing import Any
 
 from app.core.logging import log_event
@@ -23,7 +24,9 @@ async def notify_user(user_id: uuid.UUID | str, event: ServerEvent, **payload: A
         logger.warning("notify failed user=%s event=%s", user_id, event.value, exc_info=True)
 
 
-async def notify_users(user_ids: list[uuid.UUID | str], event: ServerEvent, **payload: Any) -> None:
+async def notify_users(
+    user_ids: Sequence[uuid.UUID | str], event: ServerEvent, **payload: Any
+) -> None:
     for user_id in user_ids:
         await notify_user(user_id, event, **payload)
 

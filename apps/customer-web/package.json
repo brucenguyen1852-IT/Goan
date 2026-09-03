@@ -1,5 +1,5 @@
 {
-  "name": "goan-customer-app",
+  "name": "@goan/customer-web",
   "private": true,
   "version": "0.1.0",
   "type": "module",

@@ -7,9 +7,11 @@
 
 import logging
 import uuid
+from collections.abc import Awaitable
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from typing import cast
 
 from redis.asyncio import Redis
 from sqlalchemy import select
@@ -94,7 +96,7 @@ async def start_matching(db: AsyncSession, redis: Redis, trip: Trip) -> list[Nea
 
     key = TRIP_OFFER_KEY.format(trip_id=trip.id)
     await redis.delete(key)
-    await redis.sadd(key, *[str(d.driver_id) for d in drivers])
+    await cast(Awaitable[int], redis.sadd(key, *[str(d.driver_id) for d in drivers]))
     await redis.expire(key, settings.MATCHING_TIMEOUT_SECONDS)
 
     await notifications.notify_users(
@@ -118,7 +120,8 @@ async def accept_offer(
         raise ConflictError("Chuyến không còn ở trạng thái đang tìm tài xế")
 
     offer_key = TRIP_OFFER_KEY.format(trip_id=trip.id)
-    if await redis.exists(offer_key) and not await redis.sismember(offer_key, str(driver_user_id)):
+    is_invited = await cast(Awaitable[bool], redis.sismember(offer_key, str(driver_user_id)))
+    if await redis.exists(offer_key) and not is_invited:
         raise PermissionDeniedError("Tài xế không nằm trong danh sách được mời chuyến này")
 
     lock_key = TRIP_LOCK_KEY.format(trip_id=trip.id)

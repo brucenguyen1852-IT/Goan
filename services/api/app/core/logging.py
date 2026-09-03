@@ -4,6 +4,7 @@ import json
 import logging
 import sys
 from datetime import datetime, timezone
+from typing import Any
 
 from app.config import settings
 
@@ -44,5 +45,5 @@ def setup_logging() -> None:
     root.setLevel(logging.DEBUG if settings.DEBUG else logging.INFO)
 
 
-def log_event(logger: logging.Logger, message: str, **fields) -> None:
+def log_event(logger: logging.Logger, message: str, **fields: Any) -> None:
     logger.info(message, extra={"extra_fields": fields})

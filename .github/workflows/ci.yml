@@ -38,7 +38,6 @@ jobs:
 
       - name: Type check (mypy)
         run: mypy app
-        continue-on-error: true   # đang siết dần theo từng domain, chưa chặn merge
 
       - name: Test
         run: pytest -q
@@ -111,6 +110,7 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-        continue-on-error: true   # bỏ đi sau khi có pnpm-lock.yaml
+      - name: Sinh API client từ OpenAPI đã commit
+        run: pnpm --filter @goan/api-client generate
+      - run: pnpm --filter @goan/api-client typecheck
       - run: pnpm build
-        continue-on-error: true   # bỏ đi sau khi apps/customer-web chuyển sang api-client
