@@ -23,9 +23,14 @@ EXEMPT_PATHS = {"/health", "/ready", "/docs", "/openapi.json", "/redoc", "/docs/
 
 # Hạn mức riêng cho các endpoint tốn tiền hoặc dễ bị lạm dụng.
 # (tiền tố đường dẫn, số request, cửa sổ tính bằng giây)
+# Lưu ý về hạn mức theo IP: nhà mạng di động Việt Nam dùng NAT quy mô lớn, hàng nghìn
+# thuê bao chia sẻ vài IP công cộng; một toà văn phòng cũng chỉ có một IP. Hạn mức IP vì
+# vậy chỉ để chặn quét hàng loạt, phải đủ rộng để không chặn nhầm người dùng thật.
+# Hạn mức chặt gắn với chi phí thật nằm ở tầng nghiệp vụ, tính theo SỐ ĐIỆN THOẠI
+# (app/domains/auth/service.py::_consume_otp_quota).
 STRICT_RULES: tuple[tuple[str, int, int], ...] = (
-    ("/api/v1/auth/request-otp", 5, 300),  # 5 tin OTP / 5 phút — mỗi tin là chi phí SMS thật
-    ("/api/v1/auth/verify-otp", 10, 300),  # chặn dò mã OTP
+    ("/api/v1/auth/request-otp", 60, 300),  # chặn quét hàng loạt từ một IP
+    ("/api/v1/auth/verify-otp", 60, 300),  # dò mã OTP còn bị chặn bởi OTP_MAX_ATTEMPTS
     ("/api/v1/trips", 20, 60),  # chặn spam tạo chuyến
 )
 

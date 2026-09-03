@@ -34,3 +34,6 @@ packages/api-client/src/generated/
 .coverage
 .coverage.*
 htmlcov/
+
+# Thư mục app Claude ghi file gửi cho người dùng
+Claude outputs/

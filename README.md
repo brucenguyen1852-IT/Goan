@@ -64,6 +64,19 @@ make smoke
 khử trùng request · ghép chuyến · quét QR sai/đúng · ghi GPS · chốt cước và trích ký quỹ ·
 ví · xoay vòng refresh token · chặn spam OTP · audit log che PII.
 
+## Rà soát toàn bộ API (quét ngang)
+
+`make smoke` đi MỘT luồng nghiệp vụ. `make audit` gọi MỌI endpoint ít nhất một lần bằng đúng
+vai trò, kèm các trường hợp phải bị từ chối — sai vai trò 403, dữ liệu sai 422, không tồn tại 404.
+
+```bash
+cd services/api && source .venv/bin/activate
+python -m scripts.create_admin 0900000000 "Quản trị viên"   # chỉ cần lần đầu
+make audit
+```
+
+62 lời gọi trên 34 đường dẫn. Chạy lại được nhiều lần (tự dọn bộ đếm hạn mức của chính nó).
+
 ## Kiểm thử & chất lượng
 
 ```bash

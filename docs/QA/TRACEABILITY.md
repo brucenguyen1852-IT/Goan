@@ -6,7 +6,7 @@
 > PRD ở đây gồm 3 tài liệu trong `docs/`: kiến trúc kỹ thuật, thiết kế luồng thanh toán,
 > và phân định hệ thống.
 >
-> Cập nhật: 03/09/2026 · **129 test tự động, độ phủ 81%**
+> Cập nhật: 03/09/2026 · **154 test tự động, độ phủ 81,8%** · 62/62 lời gọi API rà soát đạt
 
 ## Quy ước mã
 
@@ -87,6 +87,10 @@
 | PRD-SEC-07 | 2FA bắt buộc cho nhân sự nội bộ | Phân định §2.3 | — | ❌ **P1** |
 | PRD-SEC-08 | Che PII mặc định, xem đầy đủ phải nhập lý do | Phân định §2.3 | — | ❌ **P1** |
 | PRD-SEC-09 | Phân quyền `domain:action:scope` | Phân định §3.2 | — | ❌ **P1** |
+| PRD-SEC-10 | Hạn mức OTP theo **số điện thoại**, không chỉ theo IP | Phát hiện khi rà soát API | `test_auth_tokens.py` QA-AUTH-13, `test_rate_limit_and_request_id.py` QA-RL-02/05 | ✅ |
+| PRD-SEC-11 | **Đăng ký công khai không được tạo tài khoản quản trị** | Phát hiện khi rà soát API | `test_auth_tokens.py` QA-AUTH-10/11/12 | ✅ |
+| PRD-SEC-12 | Chuẩn hoá + kiểm tra số điện thoại ở biên vào | Phát hiện khi rà soát API | `test_phone.py` QA-PHONE-01…03 | ✅ |
+| PRD-SEC-13 | Dữ liệu đăng ký sai không được làm mất OTP đã gửi | Phát hiện khi rà soát API | `test_auth_tokens.py` QA-AUTH-14/15 | ✅ |
 
 ## F. Vận hành & Quan sát
 
@@ -120,10 +124,10 @@
 | Ký quỹ | 6 | 5 | 0 | 1 |
 | Chuyến & Ghép | 10 | 10 | 0 | 0 |
 | Chống gian lận | 7 | 6 | 0 | 1 |
-| Bảo mật | 9 | 6 | 0 | 3 |
+| Bảo mật | 13 | 10 | 0 | 3 |
 | Vận hành | 6 | 3 | 2 | 1 |
 | Chat | 6 | 0 | 0 | 6 |
-| **Tổng** | **58** | **38 (66%)** | **2** | **18** |
+| **Tổng** | **62** | **42 (68%)** | **2** | **18** |
 
 **Hai yêu cầu còn thiếu test** — code đã có nhưng chưa chứng minh được:
 

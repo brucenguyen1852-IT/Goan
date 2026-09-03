@@ -818,8 +818,10 @@
       "OtpRequest": {
         "properties": {
           "phone": {
-            "maxLength": 20,
-            "minLength": 9,
+            "description": "Số điện thoại Việt Nam. Nhận cả 0912345678, +84912345678, 84912345678 và có khoảng trắng — hệ thống tự chuẩn hoá về dạng 0912345678.",
+            "examples": [
+              "0901000001"
+            ],
             "title": "Phone",
             "type": "string"
           }
@@ -884,12 +886,18 @@
             "title": "License Number"
           },
           "otp": {
+            "examples": [
+              "123456"
+            ],
+            "maxLength": 8,
+            "minLength": 4,
             "title": "Otp",
             "type": "string"
           },
           "phone": {
-            "maxLength": 20,
-            "minLength": 9,
+            "examples": [
+              "0901000001"
+            ],
             "title": "Phone",
             "type": "string"
           },

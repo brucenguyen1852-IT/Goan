@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     OTP_TTL_SECONDS: int = 300
     OTP_LENGTH: int = 6
     OTP_MAX_ATTEMPTS: int = 5
+    # Hạn mức theo SỐ ĐIỆN THOẠI — đây mới là thứ gắn với chi phí SMS thật.
+    # Hạn mức theo IP (core/middleware.py) chỉ để chặn quét hàng loạt, phải nới rộng vì
+    # nhà mạng VN dùng NAT quy mô lớn.
+    OTP_MAX_PER_PHONE_WINDOW: int = 3
+    OTP_PHONE_WINDOW_SECONDS: int = 300
+    OTP_MAX_PER_PHONE_DAY: int = 10
 
     # --- Phân bổ doanh thu (SPEC 4.4) ---
     DRIVER_SHARE_RATE: Decimal = Decimal("0.58")  # tài xế nhận ~58% cước (chưa gồm phụ thu đón xa)
