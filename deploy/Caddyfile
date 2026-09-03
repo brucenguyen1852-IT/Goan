@@ -1,0 +1,23 @@
+# TLS tự động bằng Let's Encrypt. Đổi tên miền rồi khởi động là xong, không phải xin chứng chỉ
+# bằng tay và không phải nhớ gia hạn.
+{$GOAN_DOMAIN:staging.goan.vn} {
+	encode gzip
+
+	# /metrics để lộ danh sách đường dẫn và tần suất gọi — chỉ mở cho mạng nội bộ.
+	@metrics path /metrics
+	handle @metrics {
+		@denied not remote_ip private_ranges
+		respond @denied 403
+		reverse_proxy api:8000
+	}
+
+	reverse_proxy api:8000
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}

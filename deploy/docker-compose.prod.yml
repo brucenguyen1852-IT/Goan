@@ -1,0 +1,111 @@
+# Bộ dịch vụ cho staging/production (P0-10).
+#
+# Khác docker-compose.yml của dev ở ba điểm: có TLS (Caddy tự xin chứng chỉ Let's Encrypt),
+# Postgres bật WAL archiving để phục hồi được về một thời điểm bất kỳ (PITR — P0-18), và không
+# có cổng nào của DB/Redis mở ra ngoài.
+#
+# Secret KHÔNG nằm trong file này. Chạy `make -C services/api secrets-decrypt ENV=staging`
+# để sinh services/api/.env từ bản mã hoá trước khi `docker compose up`.
+
+name: goan
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [api]
+
+  postgres:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    env_file: ../services/api/.env
+    environment:
+      POSTGRES_USER: goan
+      POSTGRES_DB: goan
+    # KHÔNG mở cổng ra ngoài: chỉ các service trong mạng nội bộ nói chuyện với DB.
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backup:/backup
+      - wal_archive:/wal_archive
+    command:
+      - postgres
+      # Bật WAL archiving cho PITR. Không có nó thì bản dump hàng ngày chỉ khôi phục được
+      # về 00:00, và mọi chuyến đi phát sinh trong ngày là mất trắng.
+      - -c
+      - wal_level=replica
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=test ! -f /wal_archive/%f && cp %p /wal_archive/%f
+      - -c
+      - archive_timeout=300
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U goan"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ../services/api
+    restart: unless-stopped
+    env_file: ../services/api/.env
+    command: >-
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+  worker:
+    build: ../services/api
+    restart: unless-stopped
+    env_file: ../services/api/.env
+    command: celery -A app.workers.celery_app.celery_app worker --loglevel=info
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+  # Beat chạy RIÊNG, một bản duy nhất. Gộp chung vào worker rồi scale worker lên 2 là mỗi job
+  # định kỳ chạy hai lần — với job đối soát và job chi hoàn ký quỹ thì đó là tiền thật.
+  beat:
+    build: ../services/api
+    restart: unless-stopped
+    env_file: ../services/api/.env
+    command: celery -A app.workers.celery_app.celery_app beat --loglevel=info
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+  backup:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    env_file: ../services/api/.env
+    volumes:
+      - ./backup.sh:/usr/local/bin/backup.sh:ro
+      - ./backup:/backup
+    entrypoint: ["/bin/sh", "-c", "while true; do sleep 86400; backup.sh; done"]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+volumes:
+  pgdata:
+  redisdata:
+  wal_archive:
+  caddy_data:
+  caddy_config:
