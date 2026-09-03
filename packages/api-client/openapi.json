@@ -2029,8 +2029,44 @@
         ]
       }
     },
+    "/api/v1/auth/logout": {
+      "post": {
+        "description": "Đăng xuất thiết bị hiện tại. Không lỗi nếu token đã hết hạn — đăng xuất luôn thành công.",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/refresh": {
       "post": {
+        "description": "Xoay vòng token. Dùng lại một refresh token đã tiêu sẽ thu hồi cả phiên của thiết bị đó.",
         "operationId": "refresh_api_v1_auth_refresh_post",
         "requestBody": {
           "content": {

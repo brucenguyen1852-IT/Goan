@@ -27,28 +27,63 @@ def verify_password(raw: str, hashed: str) -> bool:
     return pwd_context.verify(raw, hashed)
 
 
-def _create_token(subject: str, role: str, token_type: str, expires_delta: timedelta) -> str:
+def _create_token(
+    subject: str,
+    role: str,
+    token_type: str,
+    expires_delta: timedelta,
+    *,
+    jti: str | None = None,
+    family: str | None = None,
+) -> str:
     now = datetime.now(timezone.utc)
-    payload = {
+    payload: dict[str, Any] = {
         "sub": subject,
         "role": role,
         "type": token_type,
         "iat": int(now.timestamp()),
         "exp": int((now + expires_delta).timestamp()),
-        "jti": secrets.token_urlsafe(8),
+        "jti": jti or new_jti(),
     }
+    if family:
+        payload["fam"] = family
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
-def create_access_token(subject: str, role: str) -> str:
+def new_jti() -> str:
+    """Định danh duy nhất của một token. Dùng để đánh dấu refresh token đã tiêu."""
+    return secrets.token_urlsafe(16)
+
+
+def new_token_family() -> str:
+    """Một 'họ' token = một lần đăng nhập trên một thiết bị.
+
+    Mọi refresh token sinh ra từ lần đăng nhập đó mang cùng family. Phát hiện tái sử dụng
+    thì thu hồi cả họ — tức là đá thiết bị đó ra, không ảnh hưởng thiết bị khác.
+    """
+    return secrets.token_urlsafe(16)
+
+
+def create_access_token(subject: str, role: str, *, family: str | None = None) -> str:
     return _create_token(
-        subject, role, ACCESS_TOKEN, timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        subject,
+        role,
+        ACCESS_TOKEN,
+        timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        family=family,
     )
 
 
-def create_refresh_token(subject: str, role: str) -> str:
+def create_refresh_token(
+    subject: str, role: str, *, jti: str | None = None, family: str | None = None
+) -> str:
     return _create_token(
-        subject, role, REFRESH_TOKEN, timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        subject,
+        role,
+        REFRESH_TOKEN,
+        timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        jti=jti,
+        family=family,
     )
 
 

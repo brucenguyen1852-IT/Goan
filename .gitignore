@@ -29,3 +29,8 @@ coverage/
 # Sinh tự động - không commit
 # (openapi.json thì CÓ commit: CI so bản sinh mới với bản này để phát hiện API đổi mà quên sinh lại client)
 packages/api-client/src/generated/
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/

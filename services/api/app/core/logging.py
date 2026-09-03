@@ -26,6 +26,9 @@ class JsonFormatter(logging.Formatter):
             "logger": record.name,
             "message": record.getMessage(),
         }
+        request_id = getattr(record, "request_id", None)
+        if request_id and request_id != "-":
+            payload["request_id"] = request_id
         for key, value in getattr(record, "extra_fields", {}).items():
             payload[key] = "***" if key in SENSITIVE_KEYS else value
         if record.exc_info:
@@ -40,6 +43,10 @@ def setup_logging() -> None:
         if settings.JSON_LOGS
         else logging.Formatter("%(levelname)s %(name)s %(message)s")
     )
+    # Gắn request_id vào mọi log record (import muộn để tránh vòng lặp import).
+    from app.core.observability import RequestIdLogFilter
+
+    handler.addFilter(RequestIdLogFilter())
     root = logging.getLogger()
     root.handlers = [handler]
     root.setLevel(logging.DEBUG if settings.DEBUG else logging.INFO)

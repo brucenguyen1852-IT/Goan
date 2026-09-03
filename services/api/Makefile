@@ -9,13 +9,16 @@ dev:
 test:
 	pytest -q
 
+cov:
+	pytest --cov=app --cov-report=term-missing --cov-report=html -q
+
 lint:
-	ruff check app tests
-	ruff format --check app tests
+	ruff check app tests alembic
+	ruff format --check app tests alembic
 
 fmt:
-	ruff check --fix app tests
-	ruff format app tests
+	ruff check --fix app tests alembic
+	ruff format app tests alembic
 
 type:
 	mypy app

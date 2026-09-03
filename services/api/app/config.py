@@ -79,6 +79,18 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 120
     JSON_LOGS: bool = True
 
+    # --- Quan sát hệ thống ---
+    SENTRY_DSN: str = ""  # trống = tắt, không cần cài sentry-sdk ở dev
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
+    RELEASE: str = ""
+
+    # --- Idempotency ---
+    IDEMPOTENCY_TTL_SECONDS: int = 86400  # giữ kết quả 24h
+    IDEMPOTENCY_REQUIRED: bool = False  # bật khi mọi client đã gửi header (xem docs/QA)
+
+    # --- Audit ---
+    AUDIT_ENABLED: bool = True
+
     # --- Mã hoá CCCD at-rest (SPEC 13) ---
     NATIONAL_ID_ENCRYPTION_KEY: str = "dev-only-32-bytes-key-change-me!"
 

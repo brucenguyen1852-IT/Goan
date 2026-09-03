@@ -5,6 +5,7 @@ Revises:
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0001"
@@ -18,9 +19,7 @@ user_role = sa.Enum("rider", "driver", "admin", name="user_role")
 user_status = sa.Enum("active", "suspended", "banned", name="user_status")
 online_status = sa.Enum("offline", "online", "on_trip", name="online_status")
 escrow_status = sa.Enum("accumulating", "fulfilled", name="escrow_status")
-escrow_tx_type = sa.Enum(
-    "accrual", "penalty_deduction", "refund", name="escrow_transaction_type"
-)
+escrow_tx_type = sa.Enum("accrual", "penalty_deduction", "refund", name="escrow_transaction_type")
 trip_status = sa.Enum(
     "requested",
     "matching",
@@ -42,9 +41,7 @@ fraud_detected_by = sa.Enum("system", "report", name="fraud_detected_by")
 fraud_severity = sa.Enum("warning", "account_locked", name="fraud_severity")
 fraud_review_status = sa.Enum("pending", "cleared", "confirmed", name="fraud_review_status")
 partner_type = sa.Enum("restaurant", "hotel", "insurance", name="partner_type")
-payment_method = sa.Enum(
-    "in_app_card", "in_app_wallet", "cash_disabled", name="payment_method"
-)
+payment_method = sa.Enum("in_app_card", "in_app_wallet", "cash_disabled", name="payment_method")
 payment_status = sa.Enum("pending", "completed", "failed", "refunded", name="payment_status")
 wallet_tx_type = sa.Enum(
     "trip_payout", "escrow_hold", "payout_withdrawal", name="wallet_transaction_type"
@@ -65,15 +62,25 @@ def upgrade() -> None:
         sa.Column("national_id_verified", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("avatar_url", sa.String(500)),
         sa.Column("status", user_status, nullable=False, server_default="active"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
     op.create_index("ix_users_phone", "users", ["phone"])
 
     op.create_table(
         "driver_profiles",
         sa.Column("id", sa.Uuid(), primary_key=True),
-        sa.Column("user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True),
+        sa.Column(
+            "user_id",
+            sa.Uuid(),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+            unique=True,
+        ),
         sa.Column("license_number", sa.String(50), nullable=False),
         sa.Column("license_years_experience", sa.Integer()),
         sa.Column("ekyc_selfie_reference_url", sa.String(500)),
@@ -91,10 +98,16 @@ def upgrade() -> None:
         sa.Column("next_selfie_check_at", sa.DateTime(timezone=True)),
         sa.Column("escrow_refund_requested_at", sa.DateTime(timezone=True)),
         sa.Column("escrow_refund_scheduled_at", sa.DateTime(timezone=True)),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
-    op.create_index("ix_driver_profiles_location", "driver_profiles", ["current_lat", "current_lng"])
+    op.create_index(
+        "ix_driver_profiles_location", "driver_profiles", ["current_lat", "current_lng"]
+    )
     op.create_index("ix_driver_profiles_online_status", "driver_profiles", ["online_status"])
     # Index GIST theo geography(Point) cho truy vấn tài xế gần nhất bằng PostGIS.
     op.execute(
@@ -116,8 +129,12 @@ def upgrade() -> None:
         sa.Column("address", sa.String(255)),
         sa.Column("requires_vat_invoice", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
 
     op.create_table(
@@ -156,8 +173,12 @@ def upgrade() -> None:
         sa.Column("restaurant_partner_id", sa.Uuid(), sa.ForeignKey("partners.id")),
         sa.Column("insurance_voided", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("idempotency_key", sa.String(64), unique=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
     op.create_index("ix_trips_status_requested_at", "trips", ["status", "requested_at"])
     op.create_index("ix_trips_driver_id", "trips", ["driver_id"])
@@ -166,7 +187,9 @@ def upgrade() -> None:
     op.create_table(
         "trip_gps_logs",
         sa.Column("id", sa.Uuid(), primary_key=True),
-        sa.Column("trip_id", sa.Uuid(), sa.ForeignKey("trips.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "trip_id", sa.Uuid(), sa.ForeignKey("trips.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("lat", sa.Float(), nullable=False),
         sa.Column("lng", sa.Float(), nullable=False),
         sa.Column("recorded_at", sa.DateTime(timezone=True), nullable=False),
@@ -185,8 +208,12 @@ def upgrade() -> None:
         sa.Column("driver_share_rate", sa.Numeric(5, 4), nullable=False),
         sa.Column("effective_from", sa.DateTime(timezone=True), nullable=False),
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
 
     op.create_table(
@@ -196,8 +223,12 @@ def upgrade() -> None:
         sa.Column("start_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("end_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
     op.create_index("ix_peak_periods_range", "peak_periods", ["start_at", "end_at"])
 
@@ -212,9 +243,13 @@ def upgrade() -> None:
         sa.Column("note", sa.String(255)),
         sa.Column("scheduled_payout_date", sa.DateTime(timezone=True)),
         sa.Column("processed_at", sa.DateTime(timezone=True)),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
-    op.create_index("ix_escrow_tx_driver_created", "escrow_transactions", ["driver_id", "created_at"])
+    op.create_index(
+        "ix_escrow_tx_driver_created", "escrow_transactions", ["driver_id", "created_at"]
+    )
 
     op.create_table(
         "fraud_incidents",
@@ -226,9 +261,13 @@ def upgrade() -> None:
         sa.Column("severity", fraud_severity, nullable=False),
         sa.Column("penalty_amount", MONEY, nullable=False, server_default="0"),
         sa.Column("details", sa.JSON(), nullable=False, server_default="{}"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
-    op.create_index("ix_fraud_incidents_driver_created", "fraud_incidents", ["driver_id", "created_at"])
+    op.create_index(
+        "ix_fraud_incidents_driver_created", "fraud_incidents", ["driver_id", "created_at"]
+    )
 
     op.create_table(
         "fraud_review_queue",
@@ -240,7 +279,9 @@ def upgrade() -> None:
         sa.Column("status", fraud_review_status, nullable=False, server_default="pending"),
         sa.Column("reviewed_by", sa.Uuid(), sa.ForeignKey("users.id")),
         sa.Column("reviewed_at", sa.DateTime(timezone=True)),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
 
     op.create_table(
@@ -258,7 +299,9 @@ def upgrade() -> None:
         sa.Column("trip_id", sa.Uuid(), sa.ForeignKey("trips.id"), nullable=False),
         sa.Column("amount", MONEY, nullable=False),
         sa.Column("paid_at", sa.DateTime(timezone=True)),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
 
     op.create_table(
@@ -272,8 +315,12 @@ def upgrade() -> None:
         sa.Column("active_hours", sa.JSON(), nullable=False, server_default="{}"),
         sa.Column("is_new_zone", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
 
     op.create_table(
@@ -283,7 +330,9 @@ def upgrade() -> None:
         sa.Column("zone_id", sa.Uuid(), sa.ForeignKey("satellite_zones.id")),
         sa.Column("amount", MONEY, nullable=False),
         sa.Column("note", sa.String(255)),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
 
     op.create_table(
@@ -296,7 +345,9 @@ def upgrade() -> None:
         sa.Column("status", payment_status, nullable=False, server_default="pending"),
         sa.Column("gateway_reference", sa.String(120)),
         sa.Column("idempotency_key", sa.String(64), unique=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
     op.create_index("ix_payments_trip", "payments", ["trip_id"])
 
@@ -305,7 +356,9 @@ def upgrade() -> None:
         sa.Column("driver_id", sa.Uuid(), sa.ForeignKey("users.id"), primary_key=True),
         sa.Column("available_balance", MONEY, nullable=False, server_default="0"),
         sa.Column("pending_balance", MONEY, nullable=False, server_default="0"),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
 
     op.create_table(
@@ -317,9 +370,13 @@ def upgrade() -> None:
         sa.Column("amount", MONEY, nullable=False),
         sa.Column("available_at", sa.DateTime(timezone=True)),
         sa.Column("released", sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
-    op.create_index("ix_wallet_tx_driver_created", "wallet_transactions", ["driver_id", "created_at"])
+    op.create_index(
+        "ix_wallet_tx_driver_created", "wallet_transactions", ["driver_id", "created_at"]
+    )
 
     op.create_table(
         "reconciliation_reports",
@@ -335,8 +392,12 @@ def upgrade() -> None:
         sa.Column("payout_wallet_diff", MONEY, nullable=False, server_default="0"),
         sa.Column("balanced", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("details", sa.JSON(), nullable=False, server_default="{}"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
 
 

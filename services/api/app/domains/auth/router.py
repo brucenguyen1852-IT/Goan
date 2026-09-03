@@ -46,5 +46,23 @@ async def verify_otp(
 
 
 @router.post("/refresh", response_model=TokenPair)
-async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) -> TokenPair:
-    return await auth_service.refresh_tokens(db, payload.refresh_token)
+async def refresh(
+    payload: RefreshRequest,
+    db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+) -> TokenPair:
+    """Xoay vòng token. Dùng lại một refresh token đã tiêu sẽ thu hồi cả phiên của thiết bị đó."""
+    return await auth_service.refresh_tokens(db, redis, payload.refresh_token)
+
+
+@router.post("/logout", status_code=204)
+async def logout(payload: RefreshRequest, redis: Redis = Depends(get_redis)) -> None:
+    """Đăng xuất thiết bị hiện tại. Không lỗi nếu token đã hết hạn — đăng xuất luôn thành công."""
+    from app.core.security import REFRESH_TOKEN, decode_token
+
+    try:
+        claims = decode_token(payload.refresh_token, expected_type=REFRESH_TOKEN)
+    except Exception:
+        return None
+    await auth_service.logout(redis, claims)
+    return None

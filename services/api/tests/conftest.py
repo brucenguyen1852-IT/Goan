@@ -4,7 +4,9 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
+import pytest
 import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
@@ -12,6 +14,7 @@ from app.core.constants import OnlineStatus, TripStatus, UserRole
 from app.domains.trips.models import Trip
 from app.domains.users.models import DriverProfile, User
 from app.models_registry import Base
+from tests.fakes import FakeRedis
 
 
 @pytest_asyncio.fixture
@@ -27,6 +30,51 @@ async def db():
     async with session_factory() as session:
         yield session
     await engine.dispose()
+
+
+@pytest.fixture
+def fake_redis() -> FakeRedis:
+    return FakeRedis()
+
+
+@pytest_asyncio.fixture
+async def api_client(db, fake_redis, monkeypatch):
+    """HTTP client chạy qua đúng chuỗi middleware thật (RequestId -> RateLimit -> Idempotency -> Audit).
+
+    Đây là điểm khác biệt so với test service: nó bắt được lỗi ở tầng middleware, thứ mà
+    test gọi thẳng hàm không bao giờ thấy.
+    """
+    import app.core.audit_middleware as audit_mw
+    import app.core.idempotency as idem
+    import app.core.middleware as rate_mw
+    from app.database import get_db
+    from app.deps import get_redis
+    from app.main import app
+
+    monkeypatch.setattr(rate_mw, "get_redis", lambda: fake_redis)
+    monkeypatch.setattr(idem, "get_redis", lambda: fake_redis)
+
+    class _SessionCtx:
+        async def __aenter__(self):
+            return db
+
+        async def __aexit__(self, *exc):
+            return False
+
+    monkeypatch.setattr(audit_mw, "SessionFactory", lambda: _SessionCtx())
+
+    async def _get_db():
+        yield db
+
+    async def _get_redis():
+        return fake_redis
+
+    app.dependency_overrides[get_db] = _get_db
+    app.dependency_overrides[get_redis] = _get_redis
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
+    app.dependency_overrides.clear()
 
 
 async def create_rider(db, *, phone: str = "0900000001") -> User:

@@ -9,11 +9,33 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 filterwarnings = ["ignore::DeprecationWarning"]
+addopts = "--strict-markers"
+markers = [
+  "unit: hàm thuần, không DB, không mạng — phải chạy dưới 1 giây",
+  "integration: có DB (SQLite in-memory) hoặc nhiều lớp phối hợp",
+  "api: gọi qua HTTP client, kiểm tra cả middleware và mã trạng thái",
+  "security: phân quyền, token, chống lạm dụng",
+  "money: mọi thứ chạm tiền — cước, ví, ký quỹ, đối soát. Không bao giờ được đỏ",
+  "prd: có ánh xạ tới một mục PRD trong docs/QA/TRACEABILITY.md",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/workers/*", "alembic/*", "scripts/*"]
+
+[tool.coverage.report]
+skip_empty = true
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+  "\\.\\.\\.",
+]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-exclude = [".venv", "alembic/versions", "__pycache__"]
+exclude = [".venv", "__pycache__"]
 
 [tool.ruff.lint]
 select = [
