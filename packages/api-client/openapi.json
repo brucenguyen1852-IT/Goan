@@ -225,6 +225,24 @@
         "title": "ApprovalStatus",
         "type": "string"
       },
+      "ApproveRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "ApproveRequest",
+        "type": "object"
+      },
       "ArrivedRequest": {
         "description": "Tài xế báo đã tới điểm đón. Toạ độ để đối chiếu — báo đến từ xa 5km là dấu hiệu bất thường.",
         "properties": {
@@ -561,6 +579,32 @@
         ],
         "title": "Coordinate",
         "type": "object"
+      },
+      "DecisionRequest": {
+        "properties": {
+          "reason": {
+            "description": "Lý do, gửi kèm cho tài xế",
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "DecisionRequest",
+        "type": "object"
+      },
+      "DriverApprovalStatus": {
+        "description": "Duyệt hồ sơ tài xế (P1-10). Khác với UserStatus: hồ sơ được duyệt rồi vẫn có thể bị\nkhoá tài khoản vì gian lận, và ngược lại tài khoản đang hoạt động vẫn có thể chờ duyệt.",
+        "enum": [
+          "pending",
+          "approved",
+          "rejected"
+        ],
+        "title": "DriverApprovalStatus",
+        "type": "string"
       },
       "DriverProfileOut": {
         "properties": {
@@ -962,6 +1006,120 @@
         "title": "FareEstimateResponse",
         "type": "object"
       },
+      "FleetDriverOut": {
+        "description": "Một chấm trên bản đồ Live Ops. Không kèm PII: bản đồ không cần số điện thoại.",
+        "properties": {
+          "current_trip_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Trip Id"
+          },
+          "driver_id": {
+            "format": "uuid",
+            "title": "Driver Id",
+            "type": "string"
+          },
+          "full_name_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name Masked"
+          },
+          "lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
+          },
+          "lng": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lng"
+          },
+          "online_status": {
+            "$ref": "#/components/schemas/OnlineStatus"
+          },
+          "rating_avg": {
+            "title": "Rating Avg",
+            "type": "string"
+          },
+          "total_trips": {
+            "title": "Total Trips",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "driver_id",
+          "full_name_masked",
+          "online_status",
+          "lat",
+          "lng",
+          "rating_avg",
+          "total_trips"
+        ],
+        "title": "FleetDriverOut",
+        "type": "object"
+      },
+      "FleetSnapshot": {
+        "properties": {
+          "drivers": {
+            "items": {
+              "$ref": "#/components/schemas/FleetDriverOut"
+            },
+            "title": "Drivers",
+            "type": "array"
+          },
+          "drivers_on_trip": {
+            "title": "Drivers On Trip",
+            "type": "integer"
+          },
+          "drivers_online": {
+            "title": "Drivers Online",
+            "type": "integer"
+          },
+          "taken_at": {
+            "format": "date-time",
+            "title": "Taken At",
+            "type": "string"
+          },
+          "trips_active": {
+            "title": "Trips Active",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "taken_at",
+          "drivers_online",
+          "drivers_on_trip",
+          "trips_active",
+          "drivers"
+        ],
+        "title": "FleetSnapshot",
+        "type": "object"
+      },
       "FraudDetectedBy": {
         "enum": [
           "system",
@@ -1265,6 +1423,296 @@
         ],
         "title": "OnlineStatus",
         "type": "string"
+      },
+      "OpsDriverOut": {
+        "properties": {
+          "account_status": {
+            "$ref": "#/components/schemas/UserStatus"
+          },
+          "approval_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Note"
+          },
+          "approval_status": {
+            "$ref": "#/components/schemas/DriverApprovalStatus"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "driver_id": {
+            "format": "uuid",
+            "title": "Driver Id",
+            "type": "string"
+          },
+          "escrow_balance": {
+            "title": "Escrow Balance",
+            "type": "string"
+          },
+          "fraud_strikes": {
+            "title": "Fraud Strikes",
+            "type": "integer"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "license_number": {
+            "title": "License Number",
+            "type": "string"
+          },
+          "national_id_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "National Id Masked"
+          },
+          "national_id_verified": {
+            "title": "National Id Verified",
+            "type": "boolean"
+          },
+          "online_status": {
+            "$ref": "#/components/schemas/OnlineStatus"
+          },
+          "phone_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone Masked"
+          },
+          "rating_avg": {
+            "title": "Rating Avg",
+            "type": "string"
+          },
+          "total_trips": {
+            "title": "Total Trips",
+            "type": "integer"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "driver_id",
+          "user_id",
+          "full_name",
+          "phone_masked",
+          "national_id_masked",
+          "national_id_verified",
+          "license_number",
+          "approval_status",
+          "account_status",
+          "online_status",
+          "rating_avg",
+          "total_trips",
+          "fraud_strikes",
+          "escrow_balance"
+        ],
+        "title": "OpsDriverOut",
+        "type": "object"
+      },
+      "OpsTripOut": {
+        "properties": {
+          "cancellation_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancellation Reason"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Km"
+          },
+          "driver_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Driver Id"
+          },
+          "driver_payout": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Driver Payout"
+          },
+          "dropoff_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dropoff Address"
+          },
+          "estimated_fare": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Fare"
+          },
+          "final_fare": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Fare"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "pickup_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Address"
+          },
+          "requested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested At"
+          },
+          "rider_id": {
+            "format": "uuid",
+            "title": "Rider Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TripStatus"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "rider_id"
+        ],
+        "title": "OpsTripOut",
+        "type": "object"
+      },
+      "OpsTripPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OpsTripOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "OpsTripPage",
+        "type": "object"
       },
       "OpsUserOut": {
         "description": "Cái Console thấy mặc định: đủ để làm việc, không đủ để mang ra ngoài.",
@@ -4384,6 +4832,400 @@
         ]
       }
     },
+    "/api/v1/ops/drivers": {
+      "get": {
+        "operationId": "list_drivers_api_v1_ops_drivers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "approval_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DriverApprovalStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Approval Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/UserStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OpsDriverOut"
+                  },
+                  "title": "Response List Drivers Api V1 Ops Drivers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Drivers",
+        "tags": [
+          "ops-fleet"
+        ]
+      }
+    },
+    "/api/v1/ops/drivers/{driver_id}": {
+      "get": {
+        "operationId": "get_driver_api_v1_ops_drivers__driver_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "driver_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Driver Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsDriverOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Driver",
+        "tags": [
+          "ops-fleet"
+        ]
+      }
+    },
+    "/api/v1/ops/drivers/{driver_id}/approve": {
+      "post": {
+        "operationId": "approve_driver_api_v1_ops_drivers__driver_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "driver_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Driver Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsDriverOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve Driver",
+        "tags": [
+          "ops-fleet"
+        ]
+      }
+    },
+    "/api/v1/ops/drivers/{driver_id}/lock": {
+      "post": {
+        "operationId": "lock_driver_api_v1_ops_drivers__driver_id__lock_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "driver_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Driver Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsDriverOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Lock Driver",
+        "tags": [
+          "ops-fleet"
+        ]
+      }
+    },
+    "/api/v1/ops/drivers/{driver_id}/reject": {
+      "post": {
+        "description": "Từ chối phải có lý do, và tài xế phải biết lý do — nếu không họ nộp lại y hệt.",
+        "operationId": "reject_driver_api_v1_ops_drivers__driver_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "driver_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Driver Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsDriverOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reject Driver",
+        "tags": [
+          "ops-fleet"
+        ]
+      }
+    },
+    "/api/v1/ops/drivers/{driver_id}/unlock": {
+      "post": {
+        "operationId": "unlock_driver_api_v1_ops_drivers__driver_id__unlock_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "driver_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Driver Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsDriverOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unlock Driver",
+        "tags": [
+          "ops-fleet"
+        ]
+      }
+    },
+    "/api/v1/ops/fleet": {
+      "get": {
+        "description": "Ảnh chụp toàn đội tại một thời điểm: ai đang online, ai đang chạy chuyến nào.\n\nConsole gọi lại mỗi vài giây. Không kèm PII — bản đồ không cần số điện thoại; muốn liên hệ\nthì đi qua /ops/users/{id}/reveal-pii và để lại lý do.",
+        "operationId": "fleet_snapshot_api_v1_ops_fleet_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FleetSnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Fleet Snapshot",
+        "tags": [
+          "ops-fleet"
+        ]
+      }
+    },
     "/api/v1/ops/roles": {
       "get": {
         "operationId": "list_roles_api_v1_ops_roles_get",
@@ -4771,6 +5613,198 @@
         ]
       }
     },
+    "/api/v1/ops/stats/today": {
+      "get": {
+        "description": "Vài con số cho đầu trang Console. Không thay thế báo cáo phân tích (P5).",
+        "operationId": "stats_today_api_v1_ops_stats_today_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Stats Today Api V1 Ops Stats Today Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stats Today",
+        "tags": [
+          "ops-fleet"
+        ]
+      }
+    },
+    "/api/v1/ops/trips": {
+      "get": {
+        "description": "Phân trang bằng con trỏ thời gian: bảng chuyến chỉ lớn dần, OFFSET sẽ chậm dần.",
+        "operationId": "list_trips_api_v1_ops_trips_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TripStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "driver_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Driver Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rider_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rider Id"
+            }
+          },
+          {
+            "description": "Chỉ chuyến đã chốt tiền",
+            "in": "query",
+            "name": "settled_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Chỉ chuyến đã chốt tiền",
+              "title": "Settled Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsTripPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Trips",
+        "tags": [
+          "ops-fleet"
+        ]
+      }
+    },
     "/api/v1/ops/trips/{trip_id}/assign-driver": {
       "post": {
         "description": "Gán tài xế thủ công khi matching tự động không ra kết quả.\n\nBỏ qua bước gửi offer nhưng vẫn đi đúng state machine, và ghi rõ người thao tác cùng\nlý do vào dòng thời gian của chuyến.",
@@ -4886,6 +5920,107 @@
         "summary": "Ops Cancel Trip",
         "tags": [
           "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/trips/{trip_id}/detail": {
+      "get": {
+        "operationId": "get_trip_api_v1_ops_trips__trip_id__detail_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsTripOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Trip",
+        "tags": [
+          "ops-fleet"
+        ]
+      }
+    },
+    "/api/v1/ops/trips/{trip_id}/gps": {
+      "get": {
+        "description": "Tua lại lộ trình: cần cho tranh chấp cước và cho điều tra chạy vòng.",
+        "operationId": "trip_gps_api_v1_ops_trips__trip_id__gps_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GpsPointOut"
+                  },
+                  "title": "Response Trip Gps Api V1 Ops Trips  Trip Id  Gps Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Trip Gps",
+        "tags": [
+          "ops-fleet"
         ]
       }
     },

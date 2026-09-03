@@ -10,6 +10,7 @@ from decimal import Decimal
 from sqlalchemy import select
 
 from app.core.constants import (
+    DriverApprovalStatus,
     EscrowStatus,
     OnlineStatus,
     PartnerType,
@@ -51,6 +52,9 @@ async def seed() -> None:
                 DriverProfile(
                     user_id=user.id,
                     license_number=f"B2-{phone[-6:]}",
+                    # Tài xế mẫu coi như đã qua bước duyệt hồ sơ của Driver Ops (P1-10),
+                    # để smoke test và bản demo chạy được ngay.
+                    approval_status=DriverApprovalStatus.APPROVED,
                     license_years_experience=5,
                     ekyc_selfie_reference_url="https://cdn.goan.vn/seed/selfie.jpg",
                     escrow_balance=escrow,

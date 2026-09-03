@@ -8,7 +8,13 @@ from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, Nume
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.config import settings
-from app.core.constants import EscrowStatus, OnlineStatus, UserRole, UserStatus
+from app.core.constants import (
+    DriverApprovalStatus,
+    EscrowStatus,
+    OnlineStatus,
+    UserRole,
+    UserStatus,
+)
 from app.core.model_base import Money, TimestampMixin, uuid_pk
 from app.database import Base
 
@@ -45,6 +51,18 @@ class DriverProfile(Base, TimestampMixin):
         Uuid, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
     )
     license_number: Mapped[str] = mapped_column(String(50), nullable=False)
+    # Duyệt hồ sơ bởi Driver Ops (P1-10). Trước đây tài xế tạo hồ sơ là chạy được ngay —
+    # không có bước người thật nhìn giấy tờ.
+    approval_status: Mapped[DriverApprovalStatus] = mapped_column(
+        Enum(DriverApprovalStatus, name="driver_approval_status"),
+        default=DriverApprovalStatus.PENDING,
+        nullable=False,
+    )
+    approval_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("staff_users.id", ondelete="SET NULL"), nullable=True
+    )
     license_years_experience: Mapped[int | None] = mapped_column(Integer, nullable=True)
     ekyc_selfie_reference_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 

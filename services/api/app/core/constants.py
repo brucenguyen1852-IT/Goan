@@ -15,6 +15,15 @@ class UserStatus(str, Enum):
     BANNED = "banned"
 
 
+class DriverApprovalStatus(str, Enum):
+    """Duyệt hồ sơ tài xế (P1-10). Khác với UserStatus: hồ sơ được duyệt rồi vẫn có thể bị
+    khoá tài khoản vì gian lận, và ngược lại tài khoản đang hoạt động vẫn có thể chờ duyệt."""
+
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class OnlineStatus(str, Enum):
     OFFLINE = "offline"
     ONLINE = "online"

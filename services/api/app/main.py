@@ -22,6 +22,7 @@ from app.domains.escrow.router import router as escrow_router
 from app.domains.fraud.router import router as fraud_router
 from app.domains.iam.router import router as iam_router
 from app.domains.matching.router import router as matching_router
+from app.domains.ops.router import router as ops_router
 from app.domains.partners.router import router as partners_router
 from app.domains.payments.router import router as payments_router
 from app.domains.pricing.router import router as pricing_router
@@ -86,6 +87,7 @@ for r in (
     iam_router,
     ops_users_router,
     approvals_router,
+    ops_router,
 ):
     api.include_router(r)
 

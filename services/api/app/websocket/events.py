@@ -19,6 +19,8 @@ class ServerEvent(str, Enum):
     TRIP_COMPLETED = "trip_completed"
     DRIVER_LOCATION = "driver_location"
     SELFIE_CHECK_REQUIRED = "selfie_check_required"
+    # Thông báo từ Console: duyệt/từ chối hồ sơ, khoá/mở tài khoản (P1-10)
+    SYSTEM_NOTICE = "system_notice"
     ERROR = "error"
     PONG = "pong"
 

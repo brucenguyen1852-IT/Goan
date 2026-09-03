@@ -120,6 +120,9 @@
 | PRD-OPS-08 | Trace OpenTelemetry bật theo cấu hình; thiếu gói thì cảnh báo, không làm sập app | Phân định §3.3 | `test_metrics.py` QA-MET-07…08 | ✅ |
 | PRD-OPS-09 | Đọc nhật ký thao tác có lọc theo người / đối tượng / thời gian, phân trang con trỏ | Phân định §2.3 | `test_iam.py` QA-IAM-17/18 | ✅ |
 | PRD-OPS-10 | Thao tác của nhân sự nội bộ ghi vào `actor_staff_id`, không lẫn với người dùng app | Phân định §2.3 | `test_iam.py` QA-IAM-16 | ✅ |
+| PRD-OPS-11 | Console thấy toàn bộ tài xế online và chuyến đang chạy, không kèm PII | Phân định §2.2 | `test_ops_console.py` QA-OPS-01…03 | ✅ |
+| PRD-OPS-12 | Duyệt / từ chối hồ sơ tài xế có lý do, tài xế nhận thông báo; khoá tài khoản là xoá QR đang sống | Phân định §2.2 | `test_ops_console.py` QA-OPS-04…08 | ✅ |
+| PRD-OPS-13 | Tra cứu chuyến có lọc + phân trang con trỏ, tua lại được lộ trình GPS | Phân định §2.2 | `test_ops_console.py` QA-OPS-09…11 | ✅ |
 
 ## G. Chat & Hỗ trợ *(toàn bộ thuộc P2, chưa bắt đầu)*
 
@@ -155,3 +158,11 @@
 | PRD-OPS-06 | Cần cài `sentry-sdk` và một máy chủ thu nhận giả để kiểm chứng "không gửi kèm PII" | Làm khi bật Sentry thật trên staging (P0) |
 
 **Mười tám yêu cầu "chưa làm" nằm ở P1, P2, P5** — đã có trong Backlog, không phải nợ kỹ thuật.
+
+## Việc còn nợ sau P1 (backend)
+
+| Hạng mục | Vì sao chưa làm | Khi nào làm |
+|---|---|---|
+| Chặn tài xế chưa được duyệt lên ca | Bật ngay bây giờ sẽ chặn cả tài xế tự đăng ký qua OTP, trong khi app tài xế chưa có màn hình 'đang chờ duyệt' | Cùng P3, khi app tài xế có luồng onboarding |
+| WS `ops.fleet_update` gom 3 giây/lần | Đã có `GET /ops/fleet` để Console hỏi lại; đẩy chủ động cần một tiến trình phát sóng riêng | Cùng P2 khi làm WS gateway đa topic |
+| Tách router theo 5 nhóm audience | Bề mặt `/ops` đã tách thật; `/rider`, `/driver`, `/partner`, `/public` vẫn dùng đường dẫn cũ | P1-08 phần còn lại |
