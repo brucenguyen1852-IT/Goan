@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     STAFF_SESSION_HOURS: int = 8
     STAFF_MAX_FAILED_ATTEMPTS: int = 5
     STAFF_LOCKOUT_MINUTES: int = 15
+    # Đề nghị chạm tiền treo quá lâu rồi được duyệt trong bối cảnh đã khác là cách tạo
+    # ra sai sót đắt tiền. 72 giờ = 3 ngày làm việc.
+    APPROVAL_EXPIRE_HOURS: int = 72
 
     # --- Phân bổ doanh thu (SPEC 4.4) ---
     DRIVER_SHARE_RATE: Decimal = Decimal("0.58")  # tài xế nhận ~58% cước (chưa gồm phụ thu đón xa)

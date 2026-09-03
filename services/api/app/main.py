@@ -16,6 +16,7 @@ from app.core.metrics import render as render_metrics
 from app.core.middleware import RateLimitMiddleware
 from app.core.observability import RequestIdMiddleware, setup_sentry, setup_tracing
 from app.database import engine
+from app.domains.approvals.router import router as approvals_router
 from app.domains.auth.router import router as auth_router
 from app.domains.escrow.router import router as escrow_router
 from app.domains.fraud.router import router as fraud_router
@@ -26,6 +27,7 @@ from app.domains.payments.router import router as payments_router
 from app.domains.pricing.router import router as pricing_router
 from app.domains.trips.router import ops_router as trips_ops_router
 from app.domains.trips.router import router as trips_router
+from app.domains.users.ops_router import router as ops_users_router
 from app.domains.users.router import router as users_router
 from app.redis_client import close_redis, get_redis
 from app.websocket.connection_manager import manager
@@ -82,6 +84,8 @@ for r in (
     partners_router,
     fraud_router,
     iam_router,
+    ops_users_router,
+    approvals_router,
 ):
     api.include_router(r)
 

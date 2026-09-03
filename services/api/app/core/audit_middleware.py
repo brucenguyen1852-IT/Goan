@@ -31,6 +31,11 @@ SKIP_PATHS = frozenset({"/api/v1/auth/request-otp"})
 MAX_BODY_BYTES = 32_000
 
 
+def _reason_from_body(body: dict | None) -> str | None:
+    reason = (body or {}).get("reason")
+    return reason[:2000] if isinstance(reason, str) and reason.strip() else None
+
+
 class AuditMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if (
@@ -101,7 +106,9 @@ class AuditMiddleware(BaseHTTPMiddleware):
                 user_agent=request.headers.get("user-agent"),
                 request_id=getattr(request.state, "request_id", None),
                 payload=body,
-                reason=request.headers.get("X-Audit-Reason"),
+                # Thao tác nhạy cảm gửi lý do trong body (xem PII, khoá tài khoản, hoàn tiền).
+                # Không có thì mới lấy từ header.
+                reason=request.headers.get("X-Audit-Reason") or _reason_from_body(body),
                 duration_ms=duration_ms,
             )
             await session.commit()

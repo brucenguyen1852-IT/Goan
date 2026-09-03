@@ -92,7 +92,7 @@
 | PRD-SEC-05 | Mã hoá CCCD at-rest | Kiến trúc §8 | `test_security_crypto.py` QA-SEC-05a…e | ✅ |
 | PRD-SEC-06 | Đăng xuất một thiết bị không đá thiết bị khác | Phân định §3.2 | `test_auth_tokens.py` QA-AUTH-05 | ✅ |
 | PRD-SEC-07 | 2FA bắt buộc cho nhân sự nội bộ | Phân định §2.3 | — | ❌ **P1** |
-| PRD-SEC-08 | Che PII mặc định, xem đầy đủ phải nhập lý do | Phân định §2.3 | — | ❌ **P1** |
+| PRD-SEC-08 | Che PII mặc định, xem đầy đủ phải nhập lý do | Phân định §2.3 | `test_pii_masking.py` QA-PII-01…06 | ✅ |
 | PRD-SEC-09 | Phân quyền `domain:action:scope` | Phân định §3.2 | `test_iam.py` QA-IAM-11/12 | ✅ |
 | PRD-SEC-10 | Hạn mức OTP theo **số điện thoại**, không chỉ theo IP | Phát hiện khi rà soát API | `test_auth_tokens.py` QA-AUTH-13, `test_rate_limit_and_request_id.py` QA-RL-02/05 | ✅ |
 | PRD-SEC-11 | **Đăng ký công khai không được tạo tài khoản quản trị** | Phát hiện khi rà soát API | `test_auth_tokens.py` QA-AUTH-10/11/12 | ✅ |
@@ -103,6 +103,8 @@
 | PRD-SEC-16 | Không dùng chung tài khoản; rời công ty là **vô hiệu hoá, không xoá** | Phân định §2.3 | `test_iam.py` QA-IAM-15 | ✅ |
 | PRD-SEC-17 | Phân quyền `domain:action:scope`; thiếu quyền trả 403 kèm mã quyền còn thiếu | Phân định §3.2 | `test_iam.py` QA-IAM-11…14 | ✅ |
 | PRD-SEC-18 | Token app và token nội bộ không dùng lẫn được cho nhau | Phân định §3.2 | `test_iam.py` QA-IAM-13/14 | ✅ |
+| PRD-SEC-19 | Console che PII mặc định (SĐT, CCCD) | Phân định §2.3 | `test_pii_masking.py` QA-PII-01…03 | ✅ |
+| PRD-SEC-20 | Xem PII đầy đủ phải có quyền riêng + nêu lý do, mỗi lần đều ghi log | Phân định §2.3 | `test_pii_masking.py` QA-PII-04…06 | ✅ |
 
 ## F. Vận hành & Quan sát
 
@@ -112,7 +114,7 @@
 | PRD-OPS-02 | Mỗi request có mã truy vết xuyên log và trả về client | Phân định §3.3 | `test_rate_limit_and_request_id.py` QA-OBS-01…03 | ✅ |
 | PRD-OPS-03 | `/health` (liveness) tách khỏi `/ready` (readiness) | Phân định §3.3 | `test_rate_limit_and_request_id.py` QA-OBS-04 | ✅ |
 | PRD-OPS-04 | Audit chỉ ghi thêm, không sửa không xoá | Phân định §2.3 | — | ⚠️ **Cần ràng buộc ở tầng DB** |
-| PRD-OPS-05 | Maker–checker cho thao tác chạm tiền | Phân định §2.3 | — | ❌ **P1** |
+| PRD-OPS-05 | Maker–checker cho thao tác chạm tiền | Phân định §2.3 | `test_approvals.py` QA-APR-01…10 | ✅ |
 | PRD-OPS-06 | Sentry bật theo cấu hình, không gửi kèm PII | Phân định §3.3 | — | ⚠️ **Thiếu test** |
 | PRD-OPS-07 | Số liệu Prometheus ở `/metrics`, nhãn `path` là template route (không nổ cardinality), khoá được bằng token | Phân định §3.3 | `test_metrics.py` QA-MET-01…06 | ✅ |
 | PRD-OPS-08 | Trace OpenTelemetry bật theo cấu hình; thiếu gói thì cảnh báo, không làm sập app | Phân định §3.3 | `test_metrics.py` QA-MET-07…08 | ✅ |

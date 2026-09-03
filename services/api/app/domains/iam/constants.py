@@ -23,6 +23,8 @@ PERMISSIONS: dict[str, str] = {
     "iam:role:write": "Sửa quyền của vai trò",
     # Dấu vết
     "audit:log:read": "Đọc nhật ký thao tác",
+    # Người dùng app
+    "user:profile:read": "Xem hồ sơ khách/tài xế (dữ liệu đã che)",
     # Dữ liệu cá nhân
     "pii:full:read": "Xem số điện thoại và CCCD đầy đủ (bắt buộc nhập lý do, bị ghi log)",
     # Vận hành chuyến
@@ -80,6 +82,8 @@ ROLES: dict[str, tuple[str, tuple[str, ...]]] = {
             "trip:trip:read_all",
             "trip:trip:assign",
             "trip:trip:cancel",
+            "user:profile:read",
+            "pii:full:read",
             "driver:profile:read",
             "driver:account:lock",
             "risk:queue:read",
@@ -91,11 +95,22 @@ ROLES: dict[str, tuple[str, tuple[str, ...]]] = {
     ),
     "dispatcher": (
         "Điều phối",
-        ("ops:fleet:read", "trip:trip:read_all", "trip:trip:assign", "trip:trip:cancel"),
+        (
+            "ops:fleet:read",
+            "user:profile:read",
+            "trip:trip:read_all",
+            "trip:trip:assign",
+            "trip:trip:cancel",
+        ),
     ),
     "cs_agent": (
         "Nhân viên CSKH",
-        ("support:conversation:read_own", "support:ticket:write", "trip:trip:read_all"),
+        (
+            "support:conversation:read_own",
+            "support:ticket:write",
+            "trip:trip:read_all",
+            "user:profile:read",
+        ),
     ),
     "cs_lead": (
         "Trưởng nhóm CSKH",
@@ -104,6 +119,8 @@ ROLES: dict[str, tuple[str, tuple[str, ...]]] = {
             "support:ticket:write",
             "support:refund:approve",
             "trip:trip:read_all",
+            "user:profile:read",
+            "pii:full:read",
             "driver:profile:read",
         ),
     ),
@@ -114,6 +131,8 @@ ROLES: dict[str, tuple[str, tuple[str, ...]]] = {
             "driver:profile:approve",
             "driver:account:lock",
             "trip:trip:read_all",
+            "user:profile:read",
+            "pii:full:read",
         ),
     ),
     "risk_analyst": (
@@ -123,6 +142,8 @@ ROLES: dict[str, tuple[str, tuple[str, ...]]] = {
             "risk:penalty:propose",
             "trip:trip:read_all",
             "driver:profile:read",
+            "user:profile:read",
+            "pii:full:read",
             "finance:wallet:read",
         ),
     ),

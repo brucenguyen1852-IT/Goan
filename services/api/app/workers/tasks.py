@@ -60,3 +60,14 @@ def process_escrow_refunds(self) -> int:
 @celery_app.task(name="app.workers.tasks.expire_stale_matching")
 def expire_stale_matching() -> int:
     return _run(matching_service.expire_stale_matching_trips)
+
+
+@celery_app.task(name="app.workers.tasks.expire_stale_approvals")
+def expire_stale_approvals() -> int:
+    """Đóng các đề nghị chạm tiền đã quá hạn (P1-07)."""
+    from app.domains.approvals import service as approvals_service
+
+    async def run(db):
+        return await approvals_service.expire_due(db)
+
+    return _run(run)

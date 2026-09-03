@@ -40,6 +40,10 @@ celery_app.conf.beat_schedule = {
         "task": "app.workers.tasks.scan_off_app_signals",
         "schedule": crontab(hour=2, minute=0),
     },
+    "expire-stale-approvals": {
+        "task": "app.workers.tasks.expire_stale_approvals",
+        "schedule": crontab(minute="*/30"),
+    },
     "process-escrow-refunds": {
         "task": "app.workers.tasks.process_escrow_refunds",
         "schedule": crontab(hour=3, minute=0),

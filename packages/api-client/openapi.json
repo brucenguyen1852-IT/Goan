@@ -1,6 +1,230 @@
 {
   "components": {
     "schemas": {
+      "ApprovalCreateRequest": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Số tiền, nếu có",
+            "title": "Amount"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ApprovalKind"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "reason": {
+            "description": "Vì sao cần thao tác này",
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "resource_type": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Type"
+          }
+        },
+        "required": [
+          "kind",
+          "reason"
+        ],
+        "title": "ApprovalCreateRequest",
+        "type": "object"
+      },
+      "ApprovalDecisionRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "ApprovalDecisionRequest",
+        "type": "object"
+      },
+      "ApprovalKind": {
+        "enum": [
+          "payout",
+          "escrow_refund",
+          "fare_adjustment",
+          "fraud_penalty",
+          "refund"
+        ],
+        "title": "ApprovalKind",
+        "type": "string"
+      },
+      "ApprovalOut": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "decision_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Note"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ApprovalKind"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_by": {
+            "format": "uuid",
+            "title": "Requested By",
+            "type": "string"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "resource_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Type"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApprovalStatus"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "reason",
+          "requested_by",
+          "expires_at",
+          "created_at"
+        ],
+        "title": "ApprovalOut",
+        "type": "object"
+      },
+      "ApprovalStatus": {
+        "enum": [
+          "pending",
+          "approved",
+          "rejected",
+          "expired",
+          "cancelled"
+        ],
+        "title": "ApprovalStatus",
+        "type": "string"
+      },
       "ArrivedRequest": {
         "description": "Tài xế báo đã tới điểm đón. Toạ độ để đối chiếu — báo đến từ xa 5km là dấu hiệu bất thường.",
         "properties": {
@@ -1042,6 +1266,65 @@
         "title": "OnlineStatus",
         "type": "string"
       },
+      "OpsUserOut": {
+        "description": "Cái Console thấy mặc định: đủ để làm việc, không đủ để mang ra ngoài.",
+        "properties": {
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "national_id_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "National Id Masked"
+          },
+          "national_id_verified": {
+            "title": "National Id Verified",
+            "type": "boolean"
+          },
+          "phone_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone Masked"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "phone_masked",
+          "national_id_masked",
+          "national_id_verified",
+          "role",
+          "status"
+        ],
+        "title": "OpsUserOut",
+        "type": "object"
+      },
       "OtpRequest": {
         "properties": {
           "phone": {
@@ -1355,6 +1638,53 @@
           "scheduled_payout_date"
         ],
         "title": "RefundRequestResponse",
+        "type": "object"
+      },
+      "RevealPiiRequest": {
+        "properties": {
+          "reason": {
+            "description": "Vì sao cần xem đầy đủ. Được ghi vĩnh viễn vào nhật ký thao tác.",
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "RevealPiiRequest",
+        "type": "object"
+      },
+      "RevealPiiResponse": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "national_id_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "National Id Number"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "phone",
+          "national_id_number"
+        ],
+        "title": "RevealPiiResponse",
         "type": "object"
       },
       "ReviewDecision": {
@@ -3392,6 +3722,348 @@
         ]
       }
     },
+    "/api/v1/ops/approvals": {
+      "get": {
+        "operationId": "list_approvals_api_v1_ops_approvals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ApprovalStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ApprovalKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApprovalOut"
+                  },
+                  "title": "Response List Approvals Api V1 Ops Approvals Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Approvals",
+        "tags": [
+          "ops-approvals"
+        ]
+      },
+      "post": {
+        "operationId": "create_approval_api_v1_ops_approvals_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Approval",
+        "tags": [
+          "ops-approvals"
+        ]
+      }
+    },
+    "/api/v1/ops/approvals/{approval_id}": {
+      "get": {
+        "operationId": "get_approval_api_v1_ops_approvals__approval_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Approval",
+        "tags": [
+          "ops-approvals"
+        ]
+      }
+    },
+    "/api/v1/ops/approvals/{approval_id}/approve": {
+      "post": {
+        "operationId": "approve_approval_api_v1_ops_approvals__approval_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve Approval",
+        "tags": [
+          "ops-approvals"
+        ]
+      }
+    },
+    "/api/v1/ops/approvals/{approval_id}/cancel": {
+      "post": {
+        "operationId": "cancel_approval_api_v1_ops_approvals__approval_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Approval",
+        "tags": [
+          "ops-approvals"
+        ]
+      }
+    },
+    "/api/v1/ops/approvals/{approval_id}/reject": {
+      "post": {
+        "operationId": "reject_approval_api_v1_ops_approvals__approval_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reject Approval",
+        "tags": [
+          "ops-approvals"
+        ]
+      }
+    },
     "/api/v1/ops/audit-logs": {
       "get": {
         "description": "Phân trang theo con trỏ thời gian, không dùng OFFSET: bảng này chỉ có lớn dần.",
@@ -4214,6 +4886,113 @@
         "summary": "Ops Cancel Trip",
         "tags": [
           "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/users/{user_id}": {
+      "get": {
+        "operationId": "read_user_api_v1_ops_users__user_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsUserOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read User",
+        "tags": [
+          "ops-users"
+        ]
+      }
+    },
+    "/api/v1/ops/users/{user_id}/reveal-pii": {
+      "post": {
+        "description": "Xem số điện thoại và CCCD đầy đủ. Mỗi lần gọi là một dòng audit kèm lý do.\n\n`AuditMiddleware` lấy `reason` từ body và ghi vào `audit_logs.reason` — không cần ghi thêm\nở đây, ghi hai lần chỉ làm nhật ký khó đọc.",
+        "operationId": "reveal_pii_api_v1_ops_users__user_id__reveal_pii_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevealPiiRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevealPiiResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reveal Pii",
+        "tags": [
+          "ops-users"
         ]
       }
     },
