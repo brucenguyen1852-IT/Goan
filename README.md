@@ -102,6 +102,30 @@ python -m scripts.seed_iam admin@goan.vn "Nguyễn Văn A"     # + tạo super_a
 Lệnh trên in ra mật khẩu và URI TOTP **đúng một lần**. Quét URI vào Google Authenticator rồi
 gọi `POST /api/v1/ops/auth/login`. Không endpoint nào đọc lại được bí mật TOTP.
 
+## Quản lý secret
+
+Giá trị thật **không bao giờ** nằm dạng chữ thường trong repo. Mỗi môi trường có một file
+`services/api/.env.<môi-trường>.enc` được SOPS mã hoá theo từng giá trị (tên biến vẫn đọc được,
+nên diff của một lần đổi mật khẩu chỉ hiện đúng một dòng).
+
+```bash
+cd services/api
+make secrets-init                      # lần đầu trên máy: sinh khoá age, ghi khoá công khai vào .sops.yaml
+make secrets-new ENV=staging           # tạo file secret cho môi trường mới
+make secrets-edit ENV=staging          # sửa: mở editor, lưu xong tự mã hoá lại
+make secrets-decrypt ENV=staging       # ghi ra .env để chạy (file này đã gitignore)
+make secrets-add-key PUB=age1...       # thêm người vào đội
+```
+
+Khoá riêng nằm ở `~/.config/goan/age.key`, **không commit, không gửi qua chat**. Người rời đội:
+xoá khoá công khai của họ khỏi `.sops.yaml`, mã hoá lại, **và đổi toàn bộ secret** — họ vẫn giữ
+bản sao cũ giải mã được.
+
+`make check` và CI đều chạy `scripts/check_secrets.py`: chặn file `.env` chữ thường, chặn khoá
+riêng, và quét giá trị trông như secret thật trong file đang được git theo dõi. Thà báo nhầm và
+phải giải thích một câu, còn hơn để một khoá thật trôi vào lịch sử git — đã vào lịch sử thì xoá
+file không đủ, phải đổi khoá.
+
 ## Quan sát hệ thống
 
 `/metrics` phơi bày số liệu cho Prometheus (số request, độ trễ, request đang xử lý dở). Nhãn

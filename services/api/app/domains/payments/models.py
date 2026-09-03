@@ -4,11 +4,11 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import JSON, Date, DateTime, Enum, ForeignKey, Index, String, Uuid, func
+from sqlalchemy import JSON, Date, DateTime, ForeignKey, Index, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import PaymentMethod, PaymentStatus, WalletTransactionType
-from app.core.model_base import Money, TimestampMixin, uuid_pk
+from app.core.model_base import Money, TimestampMixin, pg_enum, uuid_pk
 from app.database import Base
 
 
@@ -21,12 +21,12 @@ class Payment(Base):
     rider_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Money, nullable=False)
     method: Mapped[PaymentMethod] = mapped_column(
-        Enum(PaymentMethod, name="payment_method"),
+        pg_enum(PaymentMethod, "payment_method"),
         default=PaymentMethod.IN_APP_CARD,
         nullable=False,
     )
     status: Mapped[PaymentStatus] = mapped_column(
-        Enum(PaymentStatus, name="payment_status"), default=PaymentStatus.PENDING, nullable=False
+        pg_enum(PaymentStatus, "payment_status"), default=PaymentStatus.PENDING, nullable=False
     )
     gateway_reference: Mapped[str | None] = mapped_column(String(120), nullable=True)
     idempotency_key: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
@@ -54,7 +54,7 @@ class WalletTransaction(Base):
     driver_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
     trip_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("trips.id"), nullable=True)
     type: Mapped[WalletTransactionType] = mapped_column(
-        Enum(WalletTransactionType, name="wallet_transaction_type"), nullable=False
+        pg_enum(WalletTransactionType, "wallet_transaction_type"), nullable=False
     )
     amount: Mapped[Decimal] = mapped_column(Money, nullable=False)
     # Mốc tiền pending được giải phóng sang available (chống hoàn/huỷ, SPEC 9)

@@ -8,7 +8,6 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
-    Enum,
     Float,
     ForeignKey,
     Index,
@@ -21,7 +20,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import TimeBand, TripActorType, TripEventType, TripStatus
-from app.core.model_base import Money, TimestampMixin, uuid_pk
+from app.core.model_base import Money, TimestampMixin, pg_enum, uuid_pk
 from app.database import Base
 
 
@@ -37,7 +36,7 @@ class Trip(Base, TimestampMixin):
     rider_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
     driver_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("users.id"), nullable=True)
     status: Mapped[TripStatus] = mapped_column(
-        Enum(TripStatus, name="trip_status"), default=TripStatus.REQUESTED, nullable=False
+        pg_enum(TripStatus, "trip_status"), default=TripStatus.REQUESTED, nullable=False
     )
 
     pickup_lat: Mapped[float] = mapped_column(Float, nullable=False)
@@ -54,7 +53,7 @@ class Trip(Base, TimestampMixin):
     optimal_distance_km: Mapped[Decimal | None] = mapped_column(Numeric(6, 2), nullable=True)
 
     time_band: Mapped[TimeBand] = mapped_column(
-        Enum(TimeBand, name="time_band"), default=TimeBand.NORMAL, nullable=False
+        pg_enum(TimeBand, "time_band"), default=TimeBand.NORMAL, nullable=False
     )
 
     estimated_fare: Mapped[Decimal | None] = mapped_column(Money, nullable=True)
@@ -127,16 +126,16 @@ class TripEvent(Base):
         Uuid, ForeignKey("trips.id", ondelete="CASCADE"), nullable=False
     )
     event_type: Mapped[TripEventType] = mapped_column(
-        Enum(TripEventType, name="trip_event_type"), nullable=False
+        pg_enum(TripEventType, "trip_event_type"), nullable=False
     )
     from_status: Mapped[TripStatus | None] = mapped_column(
-        Enum(TripStatus, name="trip_status"), nullable=True
+        pg_enum(TripStatus, "trip_status"), nullable=True
     )
     to_status: Mapped[TripStatus | None] = mapped_column(
-        Enum(TripStatus, name="trip_status"), nullable=True
+        pg_enum(TripStatus, "trip_status"), nullable=True
     )
     actor_type: Mapped[TripActorType] = mapped_column(
-        Enum(TripActorType, name="trip_actor_type"), default=TripActorType.SYSTEM, nullable=False
+        pg_enum(TripActorType, "trip_actor_type"), default=TripActorType.SYSTEM, nullable=False
     )
     actor_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     payload: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)

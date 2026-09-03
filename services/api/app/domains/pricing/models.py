@@ -4,11 +4,11 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, Enum, Index, Numeric, String
+from sqlalchemy import Boolean, DateTime, Index, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import TimeBand
-from app.core.model_base import Money, TimestampMixin, uuid_pk
+from app.core.model_base import Money, TimestampMixin, pg_enum, uuid_pk
 from app.database import Base
 
 
@@ -16,7 +16,7 @@ class PricingRule(Base, TimestampMixin):
     __tablename__ = "pricing_rules"
 
     id: Mapped[uuid.UUID] = uuid_pk()
-    time_band: Mapped[TimeBand] = mapped_column(Enum(TimeBand, name="time_band"), nullable=False)
+    time_band: Mapped[TimeBand] = mapped_column(pg_enum(TimeBand, "time_band"), nullable=False)
     base_fee: Mapped[Decimal] = mapped_column(Money, nullable=False)
     per_km: Mapped[Decimal] = mapped_column(Money, nullable=False)
     per_minute: Mapped[Decimal] = mapped_column(Money, nullable=False)

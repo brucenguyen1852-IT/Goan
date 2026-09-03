@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, Numeric, String, Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.config import settings
@@ -15,7 +15,7 @@ from app.core.constants import (
     UserRole,
     UserStatus,
 )
-from app.core.model_base import Money, TimestampMixin, uuid_pk
+from app.core.model_base import Money, TimestampMixin, pg_enum, uuid_pk
 from app.database import Base
 
 
@@ -25,13 +25,13 @@ class User(Base, TimestampMixin):
     id: Mapped[uuid.UUID] = uuid_pk()
     phone: Mapped[str] = mapped_column(String(20), unique=True, nullable=False, index=True)
     full_name: Mapped[str] = mapped_column(String(120), nullable=False)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role"), nullable=False)
+    role: Mapped[UserRole] = mapped_column(pg_enum(UserRole, "user_role"), nullable=False)
     # Lưu dạng đã mã hoá at-rest, không bao giờ log plaintext (SPEC 13)
     national_id_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
     national_id_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     status: Mapped[UserStatus] = mapped_column(
-        Enum(UserStatus, name="user_status"), default=UserStatus.ACTIVE, nullable=False
+        pg_enum(UserStatus, "user_status"), default=UserStatus.ACTIVE, nullable=False
     )
 
     driver_profile: Mapped["DriverProfile | None"] = relationship(
@@ -54,7 +54,7 @@ class DriverProfile(Base, TimestampMixin):
     # Duyệt hồ sơ bởi Driver Ops (P1-10). Trước đây tài xế tạo hồ sơ là chạy được ngay —
     # không có bước người thật nhìn giấy tờ.
     approval_status: Mapped[DriverApprovalStatus] = mapped_column(
-        Enum(DriverApprovalStatus, name="driver_approval_status"),
+        pg_enum(DriverApprovalStatus, "driver_approval_status"),
         default=DriverApprovalStatus.PENDING,
         nullable=False,
     )
@@ -71,11 +71,11 @@ class DriverProfile(Base, TimestampMixin):
         Money, default=settings.ESCROW_DEFAULT_TARGET, nullable=False
     )
     escrow_status: Mapped[EscrowStatus] = mapped_column(
-        Enum(EscrowStatus, name="escrow_status"), default=EscrowStatus.ACCUMULATING, nullable=False
+        pg_enum(EscrowStatus, "escrow_status"), default=EscrowStatus.ACCUMULATING, nullable=False
     )
 
     online_status: Mapped[OnlineStatus] = mapped_column(
-        Enum(OnlineStatus, name="online_status"), default=OnlineStatus.OFFLINE, nullable=False
+        pg_enum(OnlineStatus, "online_status"), default=OnlineStatus.OFFLINE, nullable=False
     )
     current_lat: Mapped[float | None] = mapped_column(nullable=True)
     current_lng: Mapped[float | None] = mapped_column(nullable=True)

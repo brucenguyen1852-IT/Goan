@@ -4,11 +4,11 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Uuid, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import EscrowTransactionType
-from app.core.model_base import Money, uuid_pk
+from app.core.model_base import Money, pg_enum, uuid_pk
 from app.database import Base
 
 
@@ -20,7 +20,7 @@ class EscrowTransaction(Base):
     driver_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
     trip_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("trips.id"), nullable=True)
     type: Mapped[EscrowTransactionType] = mapped_column(
-        Enum(EscrowTransactionType, name="escrow_transaction_type"), nullable=False
+        pg_enum(EscrowTransactionType, "escrow_transaction_type"), nullable=False
     )
     amount: Mapped[Decimal] = mapped_column(Money, nullable=False)
     balance_after: Mapped[Decimal] = mapped_column(Money, nullable=False)

@@ -1,0 +1,17 @@
+# Quản lý secret bằng SOPS + age (P0-11).
+#
+# Vì sao SOPS chứ không phải Doppler/Vault: không thêm nhà cung cấp phải trả tiền, không thêm
+# một hệ thống nữa phải sống 24/7 để deploy được. Khoá mã hoá nằm ở đội, file mã hoá nằm ngay
+# trong repo và đi cùng lịch sử git — thay đổi secret cũng được review như thay đổi mã.
+#
+# Vì sao dạng dotenv chứ không phải mã hoá cả file: SOPS mã hoá TỪNG GIÁ TRỊ, giữ nguyên tên
+# biến. Diff của một lần đổi mật khẩu DB chỉ hiện đúng một dòng, không phải cả file rối tinh.
+#
+# Thêm người vào đội: chạy `make -C services/api secrets-add-key PUB=age1...` rồi commit lại
+# file .enc đã mã hoá lại. Người rời đội: xoá khoá của họ khỏi đây, mã hoá lại, VÀ đổi toàn bộ
+# secret — họ vẫn giữ bản sao cũ giải mã được.
+creation_rules:
+  - path_regex: \.env\.[a-z]+\.enc$
+    # Khoá công khai age của từng người trong đội, phân tách bằng dấu phẩy.
+    # `make -C services/api secrets-init` sẽ điền dòng này lần đầu.
+    age: ""

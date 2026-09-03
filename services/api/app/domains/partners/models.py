@@ -8,7 +8,6 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
-    Enum,
     Float,
     ForeignKey,
     Integer,
@@ -20,7 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import PartnerType
-from app.core.model_base import Money, TimestampMixin, uuid_pk
+from app.core.model_base import Money, TimestampMixin, pg_enum, uuid_pk
 from app.database import Base
 
 
@@ -28,9 +27,7 @@ class Partner(Base, TimestampMixin):
     __tablename__ = "partners"
 
     id: Mapped[uuid.UUID] = uuid_pk()
-    type: Mapped[PartnerType] = mapped_column(
-        Enum(PartnerType, name="partner_type"), nullable=False
-    )
+    type: Mapped[PartnerType] = mapped_column(pg_enum(PartnerType, "partner_type"), nullable=False)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     commission_rate: Mapped[Decimal] = mapped_column(
         Numeric(5, 2), default=Decimal("0"), nullable=False

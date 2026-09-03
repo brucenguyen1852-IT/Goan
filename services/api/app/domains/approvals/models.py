@@ -10,12 +10,12 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text, Uuid
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
-from app.core.model_base import Money, TimestampMixin, uuid_pk
+from app.core.model_base import Money, TimestampMixin, pg_enum, uuid_pk
 from app.database import Base
 from app.domains.approvals.constants import ApprovalKind, ApprovalStatus
 
@@ -31,10 +31,10 @@ class ApprovalRequest(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = uuid_pk()
     kind: Mapped[ApprovalKind] = mapped_column(
-        Enum(ApprovalKind, name="approval_kind"), nullable=False
+        pg_enum(ApprovalKind, "approval_kind"), nullable=False
     )
     status: Mapped[ApprovalStatus] = mapped_column(
-        Enum(ApprovalStatus, name="approval_status"),
+        pg_enum(ApprovalStatus, "approval_status"),
         default=ApprovalStatus.PENDING,
         nullable=False,
     )

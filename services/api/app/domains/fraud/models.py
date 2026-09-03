@@ -4,11 +4,11 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import JSON, DateTime, Enum, Float, ForeignKey, Index, String, Uuid, func
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import FraudDetectedBy, FraudReviewStatus, FraudSeverity, FraudType
-from app.core.model_base import Money, uuid_pk
+from app.core.model_base import Money, pg_enum, uuid_pk
 from app.database import Base
 
 
@@ -19,14 +19,12 @@ class FraudIncident(Base):
     id: Mapped[uuid.UUID] = uuid_pk()
     trip_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("trips.id"), nullable=True)
     driver_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
-    fraud_type: Mapped[FraudType] = mapped_column(
-        Enum(FraudType, name="fraud_type"), nullable=False
-    )
+    fraud_type: Mapped[FraudType] = mapped_column(pg_enum(FraudType, "fraud_type"), nullable=False)
     detected_by: Mapped[FraudDetectedBy] = mapped_column(
-        Enum(FraudDetectedBy, name="fraud_detected_by"), nullable=False
+        pg_enum(FraudDetectedBy, "fraud_detected_by"), nullable=False
     )
     severity: Mapped[FraudSeverity] = mapped_column(
-        Enum(FraudSeverity, name="fraud_severity"), nullable=False
+        pg_enum(FraudSeverity, "fraud_severity"), nullable=False
     )
     penalty_amount: Mapped[Decimal] = mapped_column(Money, default=Decimal("0"), nullable=False)
     details: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
@@ -47,7 +45,7 @@ class FraudReviewQueue(Base):
     signal_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     details: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     status: Mapped[FraudReviewStatus] = mapped_column(
-        Enum(FraudReviewStatus, name="fraud_review_status"),
+        pg_enum(FraudReviewStatus, "fraud_review_status"),
         default=FraudReviewStatus.PENDING,
         nullable=False,
     )

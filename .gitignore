@@ -11,9 +11,15 @@ node_modules/
 dist/
 build/
 
-# Env & local data
+# Env & local data — chỉ bản .enc (đã mã hoá bằng SOPS) mới được vào repo
 .env
-.env.local
+.env.*
+!.env.example
+!.env.*.enc
+# Khoá riêng age/SSH: không bao giờ commit
+*.age
+age.key
+key.txt
 *.db
 *.sqlite3
 

@@ -18,11 +18,16 @@ Biến môi trường:
 
 import json
 import os
+import pathlib
 import sqlite3
 import sys
 import uuid
 
 import httpx
+
+# Chạy được cả `python scripts/smoke_e2e.py` lẫn `python -m scripts.smoke_e2e`: cần thấy gói
+# `app` để đọc DATABASE_URL, nếu không sẽ âm thầm quay về SQLite và ngã ở bước audit.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
 BASE = os.environ.get("GOAN_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 API = BASE + "/api/v1"
@@ -33,6 +38,53 @@ results = []
 def show(step, ok, detail=""):
     results.append(ok)
     print(f"[{OK if ok else BAD}] {step}" + (f"  →  {detail}" if detail else ""))
+
+
+def read_audit_rows():
+    """(method, path, status_code, actor_role, payload, request_id, duration_ms) theo thứ tự thời gian.
+
+    Chọn cách đọc theo DATABASE_URL: file SQLite ở dev, còn staging/production là Postgres.
+    """
+    columns = "method, path, status_code, actor_role, payload, request_id, duration_ms"
+    order = "ORDER BY created_at"
+    url = os.environ.get("GOAN_DATABASE_URL", "")
+    if not url:
+        try:
+            from app.config import settings
+
+            url = settings.DATABASE_URL
+        except Exception:
+            url = ""
+
+    if url.startswith("postgres"):
+        # Dùng engine async + asyncpg: đó là driver repo đã có sẵn. Thêm psycopg2 chỉ để chạy
+        # một câu SELECT trong bài kiểm thử là bắt cả đội cài thêm một gói không dùng đến.
+        import asyncio
+
+        from sqlalchemy import text
+        from sqlalchemy.ext.asyncio import create_async_engine
+
+        async def _fetch():
+            engine = create_async_engine(url)
+            async with engine.connect() as conn:
+                result = await conn.execute(text(f"SELECT {columns} FROM audit_logs {order}"))
+                data = [tuple(r) for r in result]
+            await engine.dispose()
+            return data
+
+        rows = asyncio.run(_fetch())
+        # payload là JSONB -> dict; phần sau của bài này so chuỗi nên đổi về chuỗi cho đồng nhất.
+        return [
+            (*r[:4], json.dumps(r[4], ensure_ascii=False) if r[4] is not None else None, *r[5:])
+            for r in rows
+        ]
+
+    db_path = os.environ.get("GOAN_DB_PATH", "goan_dev.db")
+    con = sqlite3.connect(db_path)
+    try:
+        return con.execute(f"SELECT {columns} FROM audit_logs {order}").fetchall()
+    finally:
+        con.close()
 
 
 def login(phone, role, name, extra=None):
@@ -248,12 +300,9 @@ print("        nên chỉ còn 3 lượt → đúng như quan sát. Hạn mức 
 
 # --- 13. Audit log ---
 print("\n13. AUDIT LOG — dấu vết thao tác")
-db_path = os.environ.get("GOAN_DB_PATH", "goan_dev.db")
-con = sqlite3.connect(db_path)
-rows = con.execute(
-    "SELECT method, path, status_code, actor_role, payload, request_id, duration_ms "
-    "FROM audit_logs ORDER BY created_at"
-).fetchall()
+# Đọc thẳng từ DB đang chạy, dù là SQLite (dev) hay Postgres (staging). Trước đây bài này
+# chỉ mở được file SQLite, nên chạy trên staging là ngã ở đúng bước cuối.
+rows = read_audit_rows()
 show("Ghi được bản ghi audit", len(rows) > 0, f"{len(rows)} bản ghi cho các thao tác GHI")
 otp_rows = [r for r in rows if "verify-otp" in r[1]]
 masked = all('"otp": "***"' in (r[4] or "") for r in otp_rows) if otp_rows else False
@@ -267,11 +316,9 @@ for r in rows[-5:]:
     print(
         f"        {r[0]:6} {r[1][:46]:46} {r[2]}  {str(r[3] or '-'):7} {r[6]}ms  req={str(r[5])[:10]}"
     )
-sample = otp_rows
-if sample:
+if otp_rows:
     print("        Payload đã che của verify-otp:")
-    print("        " + (sample[0][4] or "")[:150])
-con.close()
+    print("        " + (otp_rows[0][4] or "")[:150])
 
 print("\n" + "=" * 78)
 print(f"  KẾT QUẢ: {sum(results)}/{len(results)} bước đạt")
