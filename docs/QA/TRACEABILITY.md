@@ -164,6 +164,8 @@
 
 | PRD-ARCH-01 | Bề mặt API tách theo 5 nhóm đối tượng, đường dẫn cũ vẫn chạy (deprecated) | Phân định §3.1 | `test_api_audiences.py` QA-API-01…06 | ✅ |
 
+| PRD-SEC-22 | Không có secret dạng chữ thường trong repo; có cổng chặn tự động | Phân định §3.3 | `scripts/check_secrets.py` chạy trong `make check` + CI | ✅ |
+
 ## Việc còn nợ sau P1 (backend)
 
 | Hạng mục | Vì sao chưa làm | Khi nào làm |
