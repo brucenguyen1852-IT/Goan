@@ -165,4 +165,5 @@
 |---|---|---|
 | Chặn tài xế chưa được duyệt lên ca | Bật ngay bây giờ sẽ chặn cả tài xế tự đăng ký qua OTP, trong khi app tài xế chưa có màn hình 'đang chờ duyệt' | Cùng P3, khi app tài xế có luồng onboarding |
 | WS `ops.fleet_update` gom 3 giây/lần | Đã có `GET /ops/fleet` để Console hỏi lại; đẩy chủ động cần một tiến trình phát sóng riêng | Cùng P2 khi làm WS gateway đa topic |
+| Bật branch protection cho `main` | Cần thao tác trên giao diện GitHub, không nằm trong repo | Chủ dự án bật khi thuận tiện |
 | Tách router theo 5 nhóm audience | Bề mặt `/ops` đã tách thật; `/rider`, `/driver`, `/partner`, `/public` vẫn dùng đường dẫn cũ | P1-08 phần còn lại |

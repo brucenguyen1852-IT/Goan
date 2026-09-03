@@ -14,25 +14,25 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
-# Những thứ có thật trong DB nhưng KHÔNG mô tả được bằng model, nên `alembic check` luôn coi
-# là "thừa" và đòi xoá:
-#   - spatial_ref_sys: bảng của chính extension PostGIS.
-#   - ix_driver_profiles_geo: index GIST trên hàm geography(ST_MakePoint(...)), viết bằng SQL
-#     thô ở migration 0001 vì SQLAlchemy không diễn đạt được index theo biểu thức này.
-# Bỏ qua chúng để `alembic check` chỉ còn báo những khác biệt thật sự do người viết code gây ra.
-IGNORED_TABLES = {
-    "spatial_ref_sys",
-    "geography_columns",
-    "geometry_columns",
-    "raster_columns",
-    "raster_overviews",
-}
+# `alembic check` so metadata với DB thật. Trong DB thật còn có những thứ KHÔNG do chúng ta
+# tạo và không mô tả được bằng model, nên nếu không lọc thì check luôn đỏ:
+#
+#   - Bảng của extension: PostGIS (spatial_ref_sys), và bộ TIGER geocoder trong ảnh
+#     postgis/postgis mà CI dùng (cousub, place, county… — search_path có cả schema `tiger`
+#     nên chúng lọt vào lượt reflect ở schema mặc định).
+#   - ix_driver_profiles_geo: index GIST trên biểu thức geography(ST_MakePoint(...)), viết
+#     bằng SQL thô ở migration 0001 vì SQLAlchemy không diễn đạt được index theo biểu thức.
+#
+# Quy tắc: KHÔNG bao giờ đề xuất xoá một bảng mà model chưa từng biết tới. Đánh đổi đã cân
+# nhắc — nếu ai đó xoá một model mà quên viết migration, check sẽ không bắt được. Nhưng xoá
+# bảng vốn phải là quyết định có chủ đích kèm migration, còn một cổng kiểm tra đỏ vĩnh viễn
+# thì tệ hơn nhiều: không ai đọc nó nữa, và lần nó báo thay đổi thật thì cũng không ai nghe.
 IGNORED_INDEXES = {"ix_driver_profiles_geo"}
 
 
 def include_object(obj, name, type_, reflected, compare_to) -> bool:
-    if type_ == "table":
-        return name not in IGNORED_TABLES
+    if type_ == "table" and reflected and name not in target_metadata.tables:
+        return False
     if type_ == "index":
         return name not in IGNORED_INDEXES
     return True
