@@ -104,6 +104,7 @@
 | PRD-SEC-17 | Phân quyền `domain:action:scope`; thiếu quyền trả 403 kèm mã quyền còn thiếu | Phân định §3.2 | `test_iam.py` QA-IAM-11…14 | ✅ |
 | PRD-SEC-18 | Token app và token nội bộ không dùng lẫn được cho nhau | Phân định §3.2 | `test_iam.py` QA-IAM-13/14 | ✅ |
 | PRD-SEC-19 | Console che PII mặc định (SĐT, CCCD) | Phân định §2.3 | `test_pii_masking.py` QA-PII-01…03 | ✅ |
+| PRD-SEC-21 | Nhớ thiết bị đã qua 2FA 30 ngày; mật khẩu không bao giờ được bỏ qua, gỡ được ngay khi mất máy | Phân định §2.3 | `test_trusted_devices.py` QA-DEV-01…08 | ✅ |
 | PRD-SEC-20 | Xem PII đầy đủ phải có quyền riêng + nêu lý do, mỗi lần đều ghi log | Phân định §2.3 | `test_pii_masking.py` QA-PII-04…06 | ✅ |
 
 ## F. Vận hành & Quan sát
@@ -122,6 +123,8 @@
 | PRD-OPS-10 | Thao tác của nhân sự nội bộ ghi vào `actor_staff_id`, không lẫn với người dùng app | Phân định §2.3 | `test_iam.py` QA-IAM-16 | ✅ |
 | PRD-OPS-11 | Console thấy toàn bộ tài xế online và chuyến đang chạy, không kèm PII | Phân định §2.2 | `test_ops_console.py` QA-OPS-01…03 | ✅ |
 | PRD-OPS-12 | Duyệt / từ chối hồ sơ tài xế có lý do, tài xế nhận thông báo; khoá tài khoản là xoá QR đang sống | Phân định §2.2 | `test_ops_console.py` QA-OPS-04…08 | ✅ |
+| PRD-OPS-14 | Console nhận ảnh chụp đội xe qua WS, gom 3 giây/lần; hết người xem thì dừng hẳn | Phân định §2.2 | `test_ops_fleet_ws.py` QA-WS-01…10 | ✅ |
+| PRD-OPS-15 | Sửa quyền của vai trò từ Console, không cần deploy; không ai sửa được `super_admin` | Phân định §3.2 | `test_trusted_devices.py` QA-ROLE-01…06 | ✅ |
 | PRD-OPS-13 | Tra cứu chuyến có lọc + phân trang con trỏ, tua lại được lộ trình GPS | Phân định §2.2 | `test_ops_console.py` QA-OPS-09…11 | ✅ |
 
 ## G. Chat & Hỗ trợ *(toàn bộ thuộc P2, chưa bắt đầu)*
@@ -159,11 +162,11 @@
 
 **Mười tám yêu cầu "chưa làm" nằm ở P1, P2, P5** — đã có trong Backlog, không phải nợ kỹ thuật.
 
+| PRD-ARCH-01 | Bề mặt API tách theo 5 nhóm đối tượng, đường dẫn cũ vẫn chạy (deprecated) | Phân định §3.1 | `test_api_audiences.py` QA-API-01…06 | ✅ |
+
 ## Việc còn nợ sau P1 (backend)
 
 | Hạng mục | Vì sao chưa làm | Khi nào làm |
 |---|---|---|
 | Chặn tài xế chưa được duyệt lên ca | Bật ngay bây giờ sẽ chặn cả tài xế tự đăng ký qua OTP, trong khi app tài xế chưa có màn hình 'đang chờ duyệt' | Cùng P3, khi app tài xế có luồng onboarding |
-| WS `ops.fleet_update` gom 3 giây/lần | Đã có `GET /ops/fleet` để Console hỏi lại; đẩy chủ động cần một tiến trình phát sóng riêng | Cùng P2 khi làm WS gateway đa topic |
 | Bật branch protection cho `main` | Cần thao tác trên giao diện GitHub, không nằm trong repo | Chủ dự án bật khi thuận tiện |
-| Tách router theo 5 nhóm audience | Bề mặt `/ops` đã tách thật; `/rider`, `/driver`, `/partner`, `/public` vẫn dùng đường dẫn cũ | P1-08 phần còn lại |

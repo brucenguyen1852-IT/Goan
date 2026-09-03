@@ -11,7 +11,18 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class StaffLoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
-    totp_code: str = Field(min_length=6, max_length=8, description="Mã 6 số từ app xác thực")
+    totp_code: str = Field(
+        default="",
+        max_length=8,
+        description="Mã 6 số từ app xác thực. Bỏ trống được nếu gửi `device_token` còn hiệu lực",
+    )
+    device_token: str = Field(
+        default="", max_length=100, description="Token nhớ thiết bị của lần đăng nhập trước"
+    )
+    remember_device: bool = Field(
+        default=False, description="Nhớ thiết bị này 30 ngày để lần sau không phải nhập mã"
+    )
+    device_label: str | None = Field(default=None, max_length=200)
 
 
 class StaffTokens(BaseModel):
@@ -20,6 +31,10 @@ class StaffTokens(BaseModel):
     token_type: str = "bearer"
     expires_in: int = Field(description="Số giây access token còn sống")
     session_expires_in: int = Field(description="Số giây còn lại của phiên làm việc")
+    device_token: str | None = Field(
+        default=None,
+        description="Chỉ trả về khi vừa bật nhớ thiết bị. Lưu lại để lần sau khỏi nhập mã 2FA.",
+    )
 
 
 class StaffRefreshRequest(BaseModel):
@@ -32,6 +47,17 @@ class RoleOut(BaseModel):
     code: str
     name: str
     permissions: list[str] = []
+
+
+class PermissionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    code: str
+    description: str
+
+
+class RolePermissionsRequest(BaseModel):
+    permissions: list[str]
 
 
 class StaffOut(BaseModel):
@@ -67,6 +93,16 @@ class StaffRolesRequest(BaseModel):
 
 class StaffDeactivateRequest(BaseModel):
     reason: str = Field(min_length=5, max_length=500, description="Vì sao vô hiệu hoá")
+
+
+class TrustedDeviceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    device_label: str | None = None
+    created_at: datetime
+    last_used_at: datetime | None = None
+    expires_at: datetime
 
 
 class AuditLogOut(BaseModel):

@@ -21,6 +21,8 @@ class ServerEvent(str, Enum):
     SELFIE_CHECK_REQUIRED = "selfie_check_required"
     # Thông báo từ Console: duyệt/từ chối hồ sơ, khoá/mở tài khoản (P1-10)
     SYSTEM_NOTICE = "system_notice"
+    # Ảnh chụp đội xe đẩy cho Console mỗi vài giây (P1-09)
+    OPS_FLEET_UPDATE = "ops.fleet_update"
     ERROR = "error"
     PONG = "pong"
 

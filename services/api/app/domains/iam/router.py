@@ -28,7 +28,9 @@ from app.domains.iam.models import Role, StaffUser
 from app.domains.iam.schemas import (
     AuditLogOut,
     AuditLogPage,
+    PermissionOut,
     RoleOut,
+    RolePermissionsRequest,
     StaffCreateRequest,
     StaffCreateResponse,
     StaffDeactivateRequest,
@@ -37,6 +39,7 @@ from app.domains.iam.schemas import (
     StaffRefreshRequest,
     StaffRolesRequest,
     StaffTokens,
+    TrustedDeviceOut,
 )
 
 router = APIRouter(prefix="/ops", tags=["ops-iam"])
@@ -83,10 +86,16 @@ async def login(
 ) -> StaffTokens:
     """Email + mật khẩu + TOTP. Sai 5 lần thì khoá tạm thời."""
     staff = await service.authenticate(
-        db, email=body.email, password=body.password, totp_code=body.totp_code
+        db,
+        email=body.email,
+        password=body.password,
+        totp_code=body.totp_code,
+        device_token=body.device_token,
     )
     payload, jti, family = _issue_tokens(staff)
     await token_store.register(redis, jti=jti, family=family)
+    if body.remember_device:
+        payload.device_token = await service.remember_device(db, staff, label=body.device_label)
     return payload
 
 
@@ -126,6 +135,34 @@ async def logout(body: StaffRefreshRequest, redis=Depends(get_redis)) -> None:
 async def me(staff: StaffUser = Depends(get_current_staff)) -> StaffOut:
     """Console gọi ngay sau khi đăng nhập để biết được hiện những menu nào."""
     return _to_out(staff)
+
+
+@router.get("/auth/devices", response_model=list[TrustedDeviceOut])
+async def my_devices(
+    db: AsyncSession = Depends(get_db), staff: StaffUser = Depends(get_current_staff)
+) -> list[TrustedDeviceOut]:
+    """Máy nào đang được nhớ. Không nhìn thấy thì không ai gỡ được máy đã mất."""
+    return [TrustedDeviceOut.model_validate(d) for d in await service.list_devices(db, staff)]
+
+
+@router.delete("/auth/devices", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
+async def forget_my_devices(
+    db: AsyncSession = Depends(get_db), staff: StaffUser = Depends(get_current_staff)
+) -> None:
+    """Gỡ mọi thiết bị đang nhớ — lần đăng nhập sau ở đâu cũng phải nhập lại mã 2FA."""
+    await service.revoke_devices(db, staff)
+
+
+@router.post("/staff/{staff_id}/forget-devices", response_model=StaffOut)
+async def forget_staff_devices(
+    staff_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _: StaffUser = Depends(require_permission("iam:staff:write")),
+) -> StaffOut:
+    """Quản trị gỡ thiết bị của người khác: nhân sự nghỉ việc hoặc báo mất máy."""
+    target = await service.get_by_id(db, staff_id)
+    await service.revoke_devices(db, target)
+    return _to_out(target)
 
 
 # --- Nhân sự --------------------------------------------------------------------------
@@ -225,6 +262,32 @@ async def list_roles(
         RoleOut(code=r.code, name=r.name, permissions=sorted(p.code for p in r.permissions))
         for r in rows
     ]
+
+
+@router.get("/permissions", response_model=list[PermissionOut])
+async def list_permissions(
+    db: AsyncSession = Depends(get_db),
+    _: StaffUser = Depends(require_permission("iam:role:read")),
+) -> list[PermissionOut]:
+    """Danh mục quyền để Console dựng ma trận tích chọn."""
+    return [PermissionOut.model_validate(p) for p in await service.list_permissions(db)]
+
+
+@router.put("/roles/{code}/permissions", response_model=RoleOut)
+async def set_role_permissions(
+    code: str,
+    body: RolePermissionsRequest,
+    db: AsyncSession = Depends(get_db),
+    _: StaffUser = Depends(require_permission("iam:role:write")),
+) -> RoleOut:
+    """Sửa quyền của vai trò mà không cần deploy — đúng lý do vai trò nằm ở DB."""
+    role = await service.get_role(db, code)
+    updated = await service.set_role_permissions(db, role, body.permissions)
+    return RoleOut(
+        code=updated.code,
+        name=updated.name,
+        permissions=sorted(p.code for p in updated.permissions),
+    )
 
 
 # --- Nhật ký thao tác -----------------------------------------------------------------

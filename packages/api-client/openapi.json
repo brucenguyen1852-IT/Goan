@@ -1932,6 +1932,24 @@
         "title": "PartnerType",
         "type": "string"
       },
+      "PermissionOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "description"
+        ],
+        "title": "PermissionOut",
+        "type": "object"
+      },
       "RateTripRequest": {
         "properties": {
           "comment": {
@@ -2186,6 +2204,22 @@
         "title": "RoleOut",
         "type": "object"
       },
+      "RolePermissionsRequest": {
+        "properties": {
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "permissions"
+        ],
+        "title": "RolePermissionsRequest",
+        "type": "object"
+      },
       "SelfieCheckResult": {
         "properties": {
           "account_status": {
@@ -2292,6 +2326,25 @@
       },
       "StaffLoginRequest": {
         "properties": {
+          "device_label": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Label"
+          },
+          "device_token": {
+            "default": "",
+            "description": "Token nhớ thiết bị của lần đăng nhập trước",
+            "maxLength": 100,
+            "title": "Device Token",
+            "type": "string"
+          },
           "email": {
             "format": "email",
             "title": "Email",
@@ -2303,18 +2356,23 @@
             "title": "Password",
             "type": "string"
           },
+          "remember_device": {
+            "default": false,
+            "description": "Nhớ thiết bị này 30 ngày để lần sau không phải nhập mã",
+            "title": "Remember Device",
+            "type": "boolean"
+          },
           "totp_code": {
-            "description": "Mã 6 số từ app xác thực",
+            "default": "",
+            "description": "Mã 6 số từ app xác thực. Bỏ trống được nếu gửi `device_token` còn hiệu lực",
             "maxLength": 8,
-            "minLength": 6,
             "title": "Totp Code",
             "type": "string"
           }
         },
         "required": [
           "email",
-          "password",
-          "totp_code"
+          "password"
         ],
         "title": "StaffLoginRequest",
         "type": "object"
@@ -2433,6 +2491,18 @@
           "access_token": {
             "title": "Access Token",
             "type": "string"
+          },
+          "device_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Chỉ trả về khi vừa bật nhớ thiết bị. Lưu lại để lần sau khỏi nhập mã 2FA.",
+            "title": "Device Token"
           },
           "expires_in": {
             "description": "Số giây access token còn sống",
@@ -3038,6 +3108,55 @@
         "title": "TripStatus",
         "type": "string"
       },
+      "TrustedDeviceOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "device_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Label"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "TrustedDeviceOut",
+        "type": "object"
+      },
       "UserOut": {
         "properties": {
           "avatar_url": {
@@ -3316,6 +3435,7 @@
   "paths": {
     "/api/v1/admin/fraud/incidents": {
       "get": {
+        "deprecated": true,
         "operationId": "list_incidents_api_v1_admin_fraud_incidents_get",
         "responses": {
           "200": {
@@ -3346,6 +3466,7 @@
     },
     "/api/v1/admin/fraud/review-queue": {
       "get": {
+        "deprecated": true,
         "description": "Tín hiệu nghi ngờ thanh toán ngoài app, chờ admin xử lý thủ công (SPEC 7.3).",
         "operationId": "list_review_queue_api_v1_admin_fraud_review_queue_get",
         "responses": {
@@ -3377,6 +3498,7 @@
     },
     "/api/v1/admin/fraud/review-queue/{item_id}/decide": {
       "post": {
+        "deprecated": true,
         "operationId": "decide_review_item_api_v1_admin_fraud_review_queue__item_id__decide_post",
         "parameters": [
           {
@@ -3435,6 +3557,7 @@
     },
     "/api/v1/admin/reconciliation": {
       "get": {
+        "deprecated": true,
         "operationId": "list_reconciliation_reports_api_v1_admin_reconciliation_get",
         "responses": {
           "200": {
@@ -3465,6 +3588,7 @@
     },
     "/api/v1/admin/reconciliation/run": {
       "post": {
+        "deprecated": true,
         "operationId": "run_reconciliation_api_v1_admin_reconciliation_run_post",
         "parameters": [
           {
@@ -3520,6 +3644,7 @@
     },
     "/api/v1/auth/logout": {
       "post": {
+        "deprecated": true,
         "description": "Đăng xuất thiết bị hiện tại. Không lỗi nếu token đã hết hạn — đăng xuất luôn thành công.",
         "operationId": "logout_api_v1_auth_logout_post",
         "requestBody": {
@@ -3555,6 +3680,7 @@
     },
     "/api/v1/auth/refresh": {
       "post": {
+        "deprecated": true,
         "description": "Xoay vòng token. Dùng lại một refresh token đã tiêu sẽ thu hồi cả phiên của thiết bị đó.",
         "operationId": "refresh_api_v1_auth_refresh_post",
         "requestBody": {
@@ -3597,6 +3723,7 @@
     },
     "/api/v1/auth/request-otp": {
       "post": {
+        "deprecated": true,
         "operationId": "request_otp_api_v1_auth_request_otp_post",
         "requestBody": {
           "content": {
@@ -3638,6 +3765,7 @@
     },
     "/api/v1/auth/verify-otp": {
       "post": {
+        "deprecated": true,
         "operationId": "verify_otp_api_v1_auth_verify_otp_post",
         "requestBody": {
           "content": {
@@ -3677,8 +3805,744 @@
         ]
       }
     },
+    "/api/v1/driver/drivers/me": {
+      "get": {
+        "operationId": "my_driver_profile_api_v1_driver_drivers_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriverProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Driver Profile",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/drivers/me/ekyc": {
+      "post": {
+        "operationId": "submit_ekyc_api_v1_driver_drivers_me_ekyc_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EkycSubmit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EkycResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Submit Ekyc",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/drivers/me/escrow": {
+      "get": {
+        "operationId": "my_escrow_api_v1_driver_drivers_me_escrow_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscrowSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Escrow",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/drivers/me/location": {
+      "post": {
+        "operationId": "update_location_api_v1_driver_drivers_me_location_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocationUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Location",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/drivers/me/offline": {
+      "post": {
+        "operationId": "go_offline_api_v1_driver_drivers_me_offline_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Go Offline",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/drivers/me/online": {
+      "post": {
+        "description": "Bật nhận chuyến: sinh QR động mới cho phiên online này (SPEC 7.1).",
+        "operationId": "go_online_api_v1_driver_drivers_me_online_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocationUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoOnlineResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Go Online",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/drivers/me/selfie-check": {
+      "post": {
+        "description": "Selfie ngẫu nhiên chống tráo tài xế; không khớp -> khoá tài khoản ngay (SPEC 7.4).",
+        "operationId": "selfie_check_api_v1_driver_drivers_me_selfie_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfieCheckSubmit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfieCheckResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Selfie Check",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/drivers/me/wallet": {
+      "get": {
+        "operationId": "my_wallet_api_v1_driver_drivers_me_wallet_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Wallet",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/drivers/me/wallet/transactions": {
+      "get": {
+        "operationId": "my_wallet_transactions_api_v1_driver_drivers_me_wallet_transactions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WalletTransactionOut"
+                  },
+                  "title": "Response My Wallet Transactions Api V1 Driver Drivers Me Wallet Transactions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Wallet Transactions",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/drivers/{driver_id}/escrow/request-refund": {
+      "post": {
+        "description": "Chỉ tài xế đó hoặc admin mới được yêu cầu hoàn ký quỹ (SPEC 8).",
+        "operationId": "request_refund_api_v1_driver_drivers__driver_id__escrow_request_refund_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "driver_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Driver Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Request Refund",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/drivers/{driver_id}/wallet/withdraw": {
+      "post": {
+        "operationId": "withdraw_api_v1_driver_drivers__driver_id__wallet_withdraw_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "driver_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Driver Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Withdraw",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/matching/heatmap": {
+      "get": {
+        "description": "Gợi ý vị trí trực vệ tinh cho driver app (SPEC 6.4a).",
+        "operationId": "satellite_heatmap_api_v1_driver_matching_heatmap_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HeatmapZone"
+                  },
+                  "title": "Response Satellite Heatmap Api V1 Driver Matching Heatmap Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Satellite Heatmap",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/matching/trips/{trip_id}/accept": {
+      "post": {
+        "description": "Tài xế nhận chuyến (fallback HTTP của event WS `trip_offer_response`).",
+        "operationId": "accept_trip_api_v1_driver_matching_trips__trip_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Accept Trip",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/trips/{trip_id}": {
+      "get": {
+        "operationId": "get_trip_api_v1_driver_trips__trip_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Trip",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/trips/{trip_id}/arrived": {
+      "post": {
+        "description": "Tài xế báo đã tới điểm đón.\n\nKhông có mốc này thì app khách hiển thị \"tài xế đã đến\" ngay lúc tài xế mới nhận chuyến\nvà còn cách vài km.",
+        "operationId": "driver_arrived_api_v1_driver_trips__trip_id__arrived_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArrivedRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Driver Arrived",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/trips/{trip_id}/complete": {
+      "post": {
+        "operationId": "complete_trip_api_v1_driver_trips__trip_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteTripRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompleteTripResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Complete Trip",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/trips/{trip_id}/gps-ping": {
+      "post": {
+        "operationId": "gps_ping_api_v1_driver_trips__trip_id__gps_ping_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GpsPing"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Gps Ping",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/users/me": {
+      "get": {
+        "operationId": "me_api_v1_driver_users_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Me",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
     "/api/v1/drivers/me": {
       "get": {
+        "deprecated": true,
         "operationId": "my_driver_profile_api_v1_drivers_me_get",
         "responses": {
           "200": {
@@ -3705,6 +4569,7 @@
     },
     "/api/v1/drivers/me/ekyc": {
       "post": {
+        "deprecated": true,
         "operationId": "submit_ekyc_api_v1_drivers_me_ekyc_post",
         "requestBody": {
           "content": {
@@ -3751,6 +4616,7 @@
     },
     "/api/v1/drivers/me/escrow": {
       "get": {
+        "deprecated": true,
         "operationId": "my_escrow_api_v1_drivers_me_escrow_get",
         "responses": {
           "200": {
@@ -3777,6 +4643,7 @@
     },
     "/api/v1/drivers/me/location": {
       "post": {
+        "deprecated": true,
         "operationId": "update_location_api_v1_drivers_me_location_post",
         "requestBody": {
           "content": {
@@ -3816,6 +4683,7 @@
     },
     "/api/v1/drivers/me/offline": {
       "post": {
+        "deprecated": true,
         "operationId": "go_offline_api_v1_drivers_me_offline_post",
         "responses": {
           "204": {
@@ -3835,6 +4703,7 @@
     },
     "/api/v1/drivers/me/online": {
       "post": {
+        "deprecated": true,
         "description": "Bật nhận chuyến: sinh QR động mới cho phiên online này (SPEC 7.1).",
         "operationId": "go_online_api_v1_drivers_me_online_post",
         "requestBody": {
@@ -3882,6 +4751,7 @@
     },
     "/api/v1/drivers/me/selfie-check": {
       "post": {
+        "deprecated": true,
         "description": "Selfie ngẫu nhiên chống tráo tài xế; không khớp -> khoá tài khoản ngay (SPEC 7.4).",
         "operationId": "selfie_check_api_v1_drivers_me_selfie_check_post",
         "requestBody": {
@@ -3929,6 +4799,7 @@
     },
     "/api/v1/drivers/me/wallet": {
       "get": {
+        "deprecated": true,
         "operationId": "my_wallet_api_v1_drivers_me_wallet_get",
         "responses": {
           "200": {
@@ -3955,6 +4826,7 @@
     },
     "/api/v1/drivers/me/wallet/transactions": {
       "get": {
+        "deprecated": true,
         "operationId": "my_wallet_transactions_api_v1_drivers_me_wallet_transactions_get",
         "responses": {
           "200": {
@@ -3985,6 +4857,7 @@
     },
     "/api/v1/drivers/{driver_id}/escrow/request-refund": {
       "post": {
+        "deprecated": true,
         "description": "Chỉ tài xế đó hoặc admin mới được yêu cầu hoàn ký quỹ (SPEC 8).",
         "operationId": "request_refund_api_v1_drivers__driver_id__escrow_request_refund_post",
         "parameters": [
@@ -4034,6 +4907,7 @@
     },
     "/api/v1/drivers/{driver_id}/wallet/withdraw": {
       "post": {
+        "deprecated": true,
         "operationId": "withdraw_api_v1_drivers__driver_id__wallet_withdraw_post",
         "parameters": [
           {
@@ -4092,6 +4966,7 @@
     },
     "/api/v1/matching/heatmap": {
       "get": {
+        "deprecated": true,
         "description": "Gợi ý vị trí trực vệ tinh cho driver app (SPEC 6.4a).",
         "operationId": "satellite_heatmap_api_v1_matching_heatmap_get",
         "responses": {
@@ -4123,6 +4998,7 @@
     },
     "/api/v1/matching/trips/{trip_id}/accept": {
       "post": {
+        "deprecated": true,
         "description": "Tài xế nhận chuyến (fallback HTTP của event WS `trip_offer_response`).",
         "operationId": "accept_trip_api_v1_matching_trips__trip_id__accept_post",
         "parameters": [
@@ -4686,6 +5562,55 @@
         ]
       }
     },
+    "/api/v1/ops/auth/devices": {
+      "delete": {
+        "description": "Gỡ mọi thiết bị đang nhớ — lần đăng nhập sau ở đâu cũng phải nhập lại mã 2FA.",
+        "operationId": "forget_my_devices_api_v1_ops_auth_devices_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Forget My Devices",
+        "tags": [
+          "ops-iam"
+        ]
+      },
+      "get": {
+        "description": "Máy nào đang được nhớ. Không nhìn thấy thì không ai gỡ được máy đã mất.",
+        "operationId": "my_devices_api_v1_ops_auth_devices_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TrustedDeviceOut"
+                  },
+                  "title": "Response My Devices Api V1 Ops Auth Devices Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Devices",
+        "tags": [
+          "ops-iam"
+        ]
+      }
+    },
     "/api/v1/ops/auth/login": {
       "post": {
         "description": "Email + mật khẩu + TOTP. Sai 5 lần thì khoá tạm thời.",
@@ -4730,6 +5655,7 @@
     },
     "/api/v1/ops/auth/logout": {
       "post": {
+        "deprecated": true,
         "description": "Thu hồi cả phiên. Chỉ xoá token ở máy thì phiên vẫn sống tới hết 8 giờ.",
         "operationId": "logout_api_v1_ops_auth_logout_post",
         "requestBody": {
@@ -4765,6 +5691,7 @@
     },
     "/api/v1/ops/auth/me": {
       "get": {
+        "deprecated": true,
         "description": "Console gọi ngay sau khi đăng nhập để biết được hiện những menu nào.",
         "operationId": "me_api_v1_ops_auth_me_get",
         "responses": {
@@ -4792,6 +5719,7 @@
     },
     "/api/v1/ops/auth/refresh": {
       "post": {
+        "deprecated": true,
         "description": "Xoay vòng như phía app: token cũ tiêu ngay, dùng lại token đã tiêu là mất cả phiên.",
         "operationId": "refresh_api_v1_ops_auth_refresh_post",
         "requestBody": {
@@ -5226,6 +6154,241 @@
         ]
       }
     },
+    "/api/v1/ops/fraud/incidents": {
+      "get": {
+        "operationId": "list_incidents_api_v1_ops_fraud_incidents_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FraudIncidentOut"
+                  },
+                  "title": "Response List Incidents Api V1 Ops Fraud Incidents Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Incidents",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/fraud/review-queue": {
+      "get": {
+        "description": "Tín hiệu nghi ngờ thanh toán ngoài app, chờ admin xử lý thủ công (SPEC 7.3).",
+        "operationId": "list_review_queue_api_v1_ops_fraud_review_queue_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FraudReviewItemOut"
+                  },
+                  "title": "Response List Review Queue Api V1 Ops Fraud Review Queue Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Review Queue",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/fraud/review-queue/{item_id}/decide": {
+      "post": {
+        "operationId": "decide_review_item_api_v1_ops_fraud_review_queue__item_id__decide_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FraudReviewItemOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decide Review Item",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/permissions": {
+      "get": {
+        "description": "Danh mục quyền để Console dựng ma trận tích chọn.",
+        "operationId": "list_permissions_api_v1_ops_permissions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PermissionOut"
+                  },
+                  "title": "Response List Permissions Api V1 Ops Permissions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Permissions",
+        "tags": [
+          "ops-iam"
+        ]
+      }
+    },
+    "/api/v1/ops/reconciliation": {
+      "get": {
+        "operationId": "list_reconciliation_reports_api_v1_ops_reconciliation_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReconciliationReportOut"
+                  },
+                  "title": "Response List Reconciliation Reports Api V1 Ops Reconciliation Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Reconciliation Reports",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/reconciliation/run": {
+      "post": {
+        "operationId": "run_reconciliation_api_v1_ops_reconciliation_run_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "report_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Report Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationReportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Run Reconciliation",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
     "/api/v1/ops/roles": {
       "get": {
         "operationId": "list_roles_api_v1_ops_roles_get",
@@ -5251,6 +6414,64 @@
           }
         ],
         "summary": "List Roles",
+        "tags": [
+          "ops-iam"
+        ]
+      }
+    },
+    "/api/v1/ops/roles/{code}/permissions": {
+      "put": {
+        "description": "Sửa quyền của vai trò mà không cần deploy — đúng lý do vai trò nằm ở DB.",
+        "operationId": "set_role_permissions_api_v1_ops_roles__code__permissions_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolePermissionsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Role Permissions",
         "tags": [
           "ops-iam"
         ]
@@ -5454,6 +6675,55 @@
           }
         ],
         "summary": "Deactivate Staff",
+        "tags": [
+          "ops-iam"
+        ]
+      }
+    },
+    "/api/v1/ops/staff/{staff_id}/forget-devices": {
+      "post": {
+        "description": "Quản trị gỡ thiết bị của người khác: nhân sự nghỉ việc hoặc báo mất máy.",
+        "operationId": "forget_staff_devices_api_v1_ops_staff__staff_id__forget_devices_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "staff_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Staff Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Forget Staff Devices",
         "tags": [
           "ops-iam"
         ]
@@ -5925,6 +7195,7 @@
     },
     "/api/v1/ops/trips/{trip_id}/detail": {
       "get": {
+        "deprecated": true,
         "operationId": "get_trip_api_v1_ops_trips__trip_id__detail_get",
         "parameters": [
           {
@@ -6133,6 +7404,7 @@
     },
     "/api/v1/partners/qr/{token}": {
       "get": {
+        "deprecated": true,
         "description": "Endpoint public: mở luồng đặt xe rút gọn với pickup = toạ độ nhà hàng.",
         "operationId": "partner_by_qr_api_v1_partners_qr__token__get",
         "parameters": [
@@ -6176,6 +7448,7 @@
     },
     "/api/v1/pricing/estimate": {
       "post": {
+        "deprecated": true,
         "description": "Trả giá ước tính TRƯỚC khi rider xác nhận đặt (SPEC 4.5).",
         "operationId": "estimate_fare_api_v1_pricing_estimate_post",
         "requestBody": {
@@ -6216,8 +7489,775 @@
         ]
       }
     },
+    "/api/v1/public/auth/logout": {
+      "post": {
+        "description": "Đăng xuất thiết bị hiện tại. Không lỗi nếu token đã hết hạn — đăng xuất luôn thành công.",
+        "operationId": "logout_api_v1_public_auth_logout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/public/auth/refresh": {
+      "post": {
+        "description": "Xoay vòng token. Dùng lại một refresh token đã tiêu sẽ thu hồi cả phiên của thiết bị đó.",
+        "operationId": "refresh_api_v1_public_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refresh",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/public/auth/request-otp": {
+      "post": {
+        "operationId": "request_otp_api_v1_public_auth_request_otp_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OtpRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Otp",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/public/auth/verify-otp": {
+      "post": {
+        "operationId": "verify_otp_api_v1_public_auth_verify_otp_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtpVerify"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Otp",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/public/partners/qr/{token}": {
+      "get": {
+        "description": "Endpoint public: mở luồng đặt xe rút gọn với pickup = toạ độ nhà hàng.",
+        "operationId": "partner_by_qr_api_v1_public_partners_qr__token__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerQrInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Partner By Qr",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/rider/pricing/estimate": {
+      "post": {
+        "description": "Trả giá ước tính TRƯỚC khi rider xác nhận đặt (SPEC 4.5).",
+        "operationId": "estimate_fare_api_v1_rider_pricing_estimate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FareEstimateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FareEstimateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Estimate Fare",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
+    "/api/v1/rider/trips": {
+      "get": {
+        "description": "Lịch sử chuyến của chính người gọi — khách thấy chuyến mình đặt, tài xế thấy chuyến mình chạy.",
+        "operationId": "list_my_trips_api_v1_rider_trips_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Chỉ lấy chuyến đặt trước mốc này (phân trang)",
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Chỉ lấy chuyến đặt trước mốc này (phân trang)",
+              "title": "Before"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TripOut"
+                  },
+                  "title": "Response List My Trips Api V1 Rider Trips Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List My Trips",
+        "tags": [
+          "rider"
+        ]
+      },
+      "post": {
+        "operationId": "create_trip_api_v1_rider_trips_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripCreateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Trip",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
+    "/api/v1/rider/trips/{trip_id}": {
+      "get": {
+        "operationId": "get_trip_api_v1_rider_trips__trip_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Trip",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
+    "/api/v1/rider/trips/{trip_id}/cancel": {
+      "post": {
+        "operationId": "cancel_trip_api_v1_rider_trips__trip_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelTripRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Trip",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
+    "/api/v1/rider/trips/{trip_id}/events": {
+      "get": {
+        "description": "Dòng thời gian đầy đủ của chuyến — thứ CSKH mở ra khi khách khiếu nại.",
+        "operationId": "trip_timeline_api_v1_rider_trips__trip_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TripEventOut"
+                  },
+                  "title": "Response Trip Timeline Api V1 Rider Trips  Trip Id  Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Trip Timeline",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
+    "/api/v1/rider/trips/{trip_id}/gps-history": {
+      "get": {
+        "operationId": "gps_history_api_v1_rider_trips__trip_id__gps_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GpsPointOut"
+                  },
+                  "title": "Response Gps History Api V1 Rider Trips  Trip Id  Gps History Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Gps History",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
+    "/api/v1/rider/trips/{trip_id}/rate": {
+      "post": {
+        "description": "Khách đánh giá tài xế — bước cuối vòng đời chuyến, đưa chuyến sang trạng thái `rated`.",
+        "operationId": "rate_trip_api_v1_rider_trips__trip_id__rate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RateTripRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateTripResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rate Trip",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
+    "/api/v1/rider/trips/{trip_id}/retry-matching": {
+      "post": {
+        "description": "Tìm lại tài xế cho chuyến `no_driver_found`, giữ nguyên chuyến cũ.\n\nĐặt lại từ đầu sẽ tạo chuyến mới và mất liên kết với đối tác (QR nhà hàng) của lần đặt đầu.",
+        "operationId": "retry_matching_api_v1_rider_trips__trip_id__retry_matching_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Retry Matching",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
+    "/api/v1/rider/trips/{trip_id}/verify-qr": {
+      "post": {
+        "description": "Rider quét QR tài xế -> qr_verified -> in_progress (SPEC 7.1).",
+        "operationId": "verify_qr_api_v1_rider_trips__trip_id__verify_qr_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyQrRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Verify Qr",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
+    "/api/v1/rider/users/me": {
+      "get": {
+        "operationId": "me_api_v1_rider_users_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Me",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
     "/api/v1/trips": {
       "get": {
+        "deprecated": true,
         "description": "Lịch sử chuyến của chính người gọi — khách thấy chuyến mình đặt, tài xế thấy chuyến mình chạy.",
         "operationId": "list_my_trips_api_v1_trips_get",
         "parameters": [
@@ -6290,6 +8330,7 @@
         ]
       },
       "post": {
+        "deprecated": true,
         "operationId": "create_trip_api_v1_trips_post",
         "requestBody": {
           "content": {
@@ -6336,6 +8377,7 @@
     },
     "/api/v1/trips/{trip_id}": {
       "get": {
+        "deprecated": true,
         "operationId": "get_trip_api_v1_trips__trip_id__get",
         "parameters": [
           {
@@ -6384,6 +8426,7 @@
     },
     "/api/v1/trips/{trip_id}/arrived": {
       "post": {
+        "deprecated": true,
         "description": "Tài xế báo đã tới điểm đón.\n\nKhông có mốc này thì app khách hiển thị \"tài xế đã đến\" ngay lúc tài xế mới nhận chuyến\nvà còn cách vài km.",
         "operationId": "driver_arrived_api_v1_trips__trip_id__arrived_post",
         "parameters": [
@@ -6443,6 +8486,7 @@
     },
     "/api/v1/trips/{trip_id}/cancel": {
       "post": {
+        "deprecated": true,
         "operationId": "cancel_trip_api_v1_trips__trip_id__cancel_post",
         "parameters": [
           {
@@ -6501,6 +8545,7 @@
     },
     "/api/v1/trips/{trip_id}/complete": {
       "post": {
+        "deprecated": true,
         "operationId": "complete_trip_api_v1_trips__trip_id__complete_post",
         "parameters": [
           {
@@ -6559,6 +8604,7 @@
     },
     "/api/v1/trips/{trip_id}/events": {
       "get": {
+        "deprecated": true,
         "description": "Dòng thời gian đầy đủ của chuyến — thứ CSKH mở ra khi khách khiếu nại.",
         "operationId": "trip_timeline_api_v1_trips__trip_id__events_get",
         "parameters": [
@@ -6612,6 +8658,7 @@
     },
     "/api/v1/trips/{trip_id}/gps-history": {
       "get": {
+        "deprecated": true,
         "operationId": "gps_history_api_v1_trips__trip_id__gps_history_get",
         "parameters": [
           {
@@ -6664,6 +8711,7 @@
     },
     "/api/v1/trips/{trip_id}/gps-ping": {
       "post": {
+        "deprecated": true,
         "operationId": "gps_ping_api_v1_trips__trip_id__gps_ping_post",
         "parameters": [
           {
@@ -6715,6 +8763,7 @@
     },
     "/api/v1/trips/{trip_id}/rate": {
       "post": {
+        "deprecated": true,
         "description": "Khách đánh giá tài xế — bước cuối vòng đời chuyến, đưa chuyến sang trạng thái `rated`.",
         "operationId": "rate_trip_api_v1_trips__trip_id__rate_post",
         "parameters": [
@@ -6774,6 +8823,7 @@
     },
     "/api/v1/trips/{trip_id}/retry-matching": {
       "post": {
+        "deprecated": true,
         "description": "Tìm lại tài xế cho chuyến `no_driver_found`, giữ nguyên chuyến cũ.\n\nĐặt lại từ đầu sẽ tạo chuyến mới và mất liên kết với đối tác (QR nhà hàng) của lần đặt đầu.",
         "operationId": "retry_matching_api_v1_trips__trip_id__retry_matching_post",
         "parameters": [
@@ -6823,6 +8873,7 @@
     },
     "/api/v1/trips/{trip_id}/verify-qr": {
       "post": {
+        "deprecated": true,
         "description": "Rider quét QR tài xế -> qr_verified -> in_progress (SPEC 7.1).",
         "operationId": "verify_qr_api_v1_trips__trip_id__verify_qr_post",
         "parameters": [
@@ -6882,6 +8933,7 @@
     },
     "/api/v1/users/me": {
       "get": {
+        "deprecated": true,
         "operationId": "me_api_v1_users_me_get",
         "responses": {
           "200": {

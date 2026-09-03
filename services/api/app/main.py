@@ -4,8 +4,10 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI, Request, Response
+from fastapi.routing import APIRoute
 from sqlalchemy import text
 
+from app.api import AUDIENCES, build_audience_routers
 from app.config import settings
 from app.core.audit_middleware import AuditMiddleware
 from app.core.exceptions import NotFoundError, UnauthorizedError, register_exception_handlers
@@ -32,6 +34,7 @@ from app.domains.users.ops_router import router as ops_users_router
 from app.domains.users.router import router as users_router
 from app.redis_client import close_redis, get_redis
 from app.websocket.connection_manager import manager
+from app.websocket.ops_fleet import broadcaster as fleet_broadcaster
 from app.websocket.router import router as ws_router
 
 logger = logging.getLogger("goan")
@@ -51,6 +54,7 @@ async def lifespan(app_: FastAPI):
         "on" if settings.METRICS_ENABLED else "off",
     )
     yield
+    await fleet_broadcaster.shutdown()
     await manager.shutdown()
     await close_redis()
     await engine.dispose()
@@ -91,7 +95,30 @@ for r in (
 ):
     api.include_router(r)
 
+# Bề mặt cũ (không tiền tố nhóm) — vẫn chạy, đánh dấu deprecated để client cũ có thời gian
+# chuyển sang /rider, /driver, /partner, /public. Xem app/api/__init__.py.
+for route in api.routes:
+    if isinstance(route, APIRoute) and route.name in AUDIENCES:
+        route.deprecated = True
+
+api_v2 = APIRouter(prefix=settings.API_V1_PREFIX)
+for audience_router in build_audience_routers(
+    [
+        auth_router,
+        users_router,
+        pricing_router,
+        trips_router,
+        matching_router,
+        escrow_router,
+        payments_router,
+        partners_router,
+        fraud_router,
+    ]
+).values():
+    api_v2.include_router(audience_router)
+
 app.include_router(api)
+app.include_router(api_v2)
 app.include_router(ws_router)
 
 

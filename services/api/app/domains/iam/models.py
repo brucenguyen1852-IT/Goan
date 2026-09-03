@@ -13,7 +13,17 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.model_base import TimestampMixin, uuid_pk
@@ -90,4 +100,30 @@ class StaffRole(Base):
     )
     role_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+
+class TrustedDevice(Base):
+    """Thiết bị đã qua 2FA, được nhớ trong 30 ngày (P1-13).
+
+    Vì sao lưu ở DB chứ không chỉ ký một token gửi về máy: token đã ký thì không thu hồi được.
+    Nhân sự nghỉ việc, máy bị mất, hoặc phát hiện đăng nhập lạ — phải gỡ được ngay, và phải
+    nhìn thấy được danh sách máy nào đang được nhớ. Bảng này cho cả hai.
+
+    Chỉ lưu HASH của token: đọc trộm được DB cũng không dựng lại được token để dùng.
+    """
+
+    __tablename__ = "staff_trusted_devices"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    staff_user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("staff_users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    device_label: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
     )

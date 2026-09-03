@@ -7,7 +7,9 @@ Một tài khoản CSKH bị dò mật khẩu thành công là đủ để lộ 
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -25,7 +27,14 @@ from app.core.exceptions import (
 from app.core.logging import log_event
 from app.core.security import hash_password, verify_password
 from app.domains.iam.constants import PERMISSIONS, ROLES, WILDCARD
-from app.domains.iam.models import Permission, Role, RolePermission, StaffRole, StaffUser
+from app.domains.iam.models import (
+    Permission,
+    Role,
+    RolePermission,
+    StaffRole,
+    StaffUser,
+    TrustedDevice,
+)
 
 logger = logging.getLogger("goan.iam")
 
@@ -106,6 +115,57 @@ def assert_permission(staff: StaffUser, required: str) -> None:
             f"Thiếu quyền '{required}'",
             details={"required_permission": required, "email": staff.email},
         )
+
+
+async def set_role_permissions(db: AsyncSession, role: Role, permission_codes: list[str]) -> Role:
+    """Đổi bộ quyền của một vai trò. Đây là lý do vai trò nằm ở DB chứ không hardcode:
+    vận hành đổi quyền mà không cần deploy.
+
+    Không cho đụng vào `super_admin`: nó là đường thoát hiểm cuối cùng khi ai đó lỡ tay gỡ
+    hết quyền của chính mình. Gỡ được quyền của super_admin thì có thể khoá cả công ty ra
+    ngoài hệ thống, và không có cách nào sửa ngoài việc vào thẳng cơ sở dữ liệu.
+    """
+    if role.code == "super_admin":
+        raise PermissionDeniedError("Không được sửa quyền của vai trò quản trị hệ thống")
+
+    perms = list(
+        (await db.execute(select(Permission).where(Permission.code.in_(permission_codes))))
+        .scalars()
+        .all()
+    )
+    found = {p.code for p in perms}
+    missing = [code for code in permission_codes if code not in found]
+    if missing:
+        raise NotFoundError("Quyền không tồn tại", details={"permissions": missing})
+    if WILDCARD in found:
+        raise PermissionDeniedError("Không được gán quyền vạn năng cho vai trò thường")
+
+    for link in (
+        (await db.execute(select(RolePermission).where(RolePermission.role_id == role.id)))
+        .scalars()
+        .all()
+    ):
+        await db.delete(link)
+    await db.flush()
+    for perm in perms:
+        db.add(RolePermission(role_id=role.id, permission_id=perm.id))
+    await db.commit()
+    await db.refresh(role)
+    log_event(logger, "role_permissions_changed", role=role.code, permissions=sorted(found))
+    return role
+
+
+async def get_role(db: AsyncSession, code: str) -> Role:
+    role = (await db.execute(select(Role).where(Role.code == code))).scalar_one_or_none()
+    if role is None:
+        raise NotFoundError("Vai trò không tồn tại")
+    return role
+
+
+async def list_permissions(db: AsyncSession) -> list[Permission]:
+    """Danh mục quyền để Console dựng ma trận tích chọn."""
+    rows = (await db.execute(select(Permission).order_by(Permission.code))).scalars().all()
+    return [p for p in rows if p.code != WILDCARD]
 
 
 # --- Vòng đời tài khoản ---------------------------------------------------------------
@@ -251,8 +311,20 @@ async def _register_failure(db: AsyncSession, staff: StaffUser) -> None:
     await db.commit()
 
 
-async def authenticate(db: AsyncSession, *, email: str, password: str, totp_code: str) -> StaffUser:
-    """Email + mật khẩu + TOTP. Thiếu bất kỳ yếu tố nào cũng trả về cùng một lỗi."""
+async def authenticate(
+    db: AsyncSession,
+    *,
+    email: str,
+    password: str,
+    totp_code: str = "",
+    device_token: str = "",
+) -> StaffUser:
+    """Email + mật khẩu + TOTP. Thiếu bất kỳ yếu tố nào cũng trả về cùng một lỗi.
+
+    `device_token` cho phép bỏ qua bước nhập mã 6 số trên thiết bị đã qua 2FA trong 30 ngày
+    (P1-13). Mật khẩu thì KHÔNG bao giờ được bỏ qua: nhớ thiết bị là đỡ phiền lúc gõ mã, không
+    phải biến máy công ty thành chìa khoá vạn năng cho ai ngồi vào.
+    """
     staff = await get_by_email(db, email)
     if staff is None:
         # Vẫn băm một lần để thời gian trả lời không tố cáo email nào có thật.
@@ -272,9 +344,21 @@ async def authenticate(db: AsyncSession, *, email: str, password: str, totp_code
         # Không có 2FA thì không cho vào, kể cả mật khẩu đúng.
         raise PermissionDeniedError("Tài khoản chưa thiết lập xác thực hai lớp")
 
-    if not verify_password(password, staff.password_hash) or not pyotp.TOTP(
-        staff.totp_secret
-    ).verify(totp_code, valid_window=1):
+    mat_khau_dung = verify_password(password, staff.password_hash)
+    thiet_bi = (
+        await find_trusted_device(db, staff, device_token)
+        if mat_khau_dung and device_token
+        else None
+    )
+    if thiet_bi is None:
+        hai_lop_dung = bool(totp_code) and pyotp.TOTP(staff.totp_secret).verify(
+            totp_code, valid_window=1
+        )
+    else:
+        hai_lop_dung = True
+        thiet_bi.last_used_at = datetime.now(timezone.utc)
+
+    if not mat_khau_dung or not hai_lop_dung:
         await _register_failure(db, staff)
         raise UnauthorizedError(_SAI_THONG_TIN)
 
@@ -293,3 +377,67 @@ async def change_password(db: AsyncSession, staff: StaffUser, new_password: str)
     staff.password_hash = hash_password(new_password)
     await db.commit()
     log_event(logger, "staff_password_changed", staff_id=str(staff.id))
+
+
+# --- Thiết bị tin cậy (P1-13) ---------------------------------------------------------
+
+
+def _hash_device_token(token: str) -> str:
+    """Chỉ lưu hash: đọc trộm được DB cũng không dựng lại được token để dùng."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+async def remember_device(db: AsyncSession, staff: StaffUser, *, label: str | None = None) -> str:
+    """Cấp token nhớ thiết bị, sống `STAFF_TRUSTED_DEVICE_DAYS` ngày. Trả về token thô MỘT lần."""
+    token = secrets.token_urlsafe(32)
+    device = TrustedDevice(
+        staff_user_id=staff.id,
+        token_hash=_hash_device_token(token),
+        device_label=(label or "")[:200] or None,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.STAFF_TRUSTED_DEVICE_DAYS),
+    )
+    db.add(device)
+    await db.commit()
+    log_event(logger, "staff_device_remembered", staff_id=str(staff.id))
+    return token
+
+
+async def find_trusted_device(
+    db: AsyncSession, staff: StaffUser, token: str
+) -> TrustedDevice | None:
+    """Thiết bị còn hiệu lực của ĐÚNG người này. Hết hạn hoặc đã thu hồi thì coi như không có."""
+    stmt = select(TrustedDevice).where(
+        TrustedDevice.token_hash == _hash_device_token(token),
+        TrustedDevice.staff_user_id == staff.id,
+    )
+    device = (await db.execute(stmt)).scalar_one_or_none()
+    if device is None or device.revoked_at is not None:
+        return None
+    expires = device.expires_at
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    if expires <= datetime.now(timezone.utc):
+        return None
+    return device
+
+
+async def list_devices(db: AsyncSession, staff: StaffUser) -> list[TrustedDevice]:
+    stmt = (
+        select(TrustedDevice)
+        .where(TrustedDevice.staff_user_id == staff.id, TrustedDevice.revoked_at.is_(None))
+        .order_by(TrustedDevice.created_at.desc())
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def revoke_devices(db: AsyncSession, staff: StaffUser) -> int:
+    """Gỡ toàn bộ thiết bị đang nhớ. Dùng khi mất máy hoặc nhân sự nghỉ việc."""
+    now = datetime.now(timezone.utc)
+    count = 0
+    for device in await list_devices(db, staff):
+        device.revoked_at = now
+        count += 1
+    if count:
+        await db.commit()
+        log_event(logger, "staff_devices_revoked", staff_id=str(staff.id), count=count)
+    return count

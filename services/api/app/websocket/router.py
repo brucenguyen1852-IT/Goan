@@ -11,6 +11,9 @@ from app.core.exceptions import AppError
 from app.core.logging import log_event
 from app.core.security import decode_token
 from app.database import SessionFactory
+from app.deps import STAFF_ROLE
+from app.domains.iam import service as iam_service
+from app.domains.iam.models import StaffUser
 from app.domains.matching import service as matching_service
 from app.domains.trips import repository as trips_repo
 from app.domains.users import repository as users_repo
@@ -18,6 +21,7 @@ from app.domains.users import service as users_service
 from app.redis_client import get_redis
 from app.websocket.connection_manager import manager
 from app.websocket.events import ClientEvent, ServerEvent, server_message
+from app.websocket.ops_fleet import broadcaster
 
 logger = logging.getLogger("goan.ws")
 
@@ -94,3 +98,47 @@ async def _handle_message(
         return
 
     log_event(logger, "ws_unknown_message", user_id=str(user_id), msg_type=str(msg_type))
+
+
+@router.websocket("/ws/ops/fleet")
+async def ops_fleet_socket(websocket: WebSocket, token: str = Query(...)) -> None:
+    """Console mở kết nối này để nhận ảnh chụp đội xe mỗi vài giây (P1-09).
+
+    Endpoint riêng chứ không dùng chung `/ws`: người xem Console không cần và không được nhận
+    luồng sự kiện chuyến của khách/tài xế, còn khách/tài xế thì không được nhận vị trí toàn đội.
+    """
+    try:
+        payload = decode_token(token)
+    except AppError:
+        await websocket.close(code=4401)
+        return
+
+    if payload.get("role") != STAFF_ROLE:
+        await websocket.close(code=4403)
+        return
+
+    staff_id = uuid.UUID(payload["sub"])
+    async with SessionFactory() as db:
+        staff = await db.get(StaffUser, staff_id)
+        # Kiểm quyền y như REST: ẩn menu ở giao diện không phải là phân quyền.
+        if (
+            staff is None
+            or not staff.is_active
+            or not iam_service.has_permission(staff, "ops:fleet:read")
+        ):
+            await websocket.close(code=4403)
+            return
+
+    await websocket.accept()
+    await broadcaster.subscribe(websocket, staff_id)
+    try:
+        # Gửi ngay một ảnh chụp để Console không phải nhìn màn hình trống 3 giây đầu.
+        await broadcaster.broadcast_once()
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    except Exception:  # pragma: no cover - đóng kết nối an toàn khi lỗi bất ngờ
+        logger.exception("ops fleet ws error")
+    finally:
+        await broadcaster.unsubscribe(websocket)
