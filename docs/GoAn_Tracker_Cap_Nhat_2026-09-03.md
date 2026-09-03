@@ -58,7 +58,6 @@ Chèn phía trên khối "ĐÁNH GIÁ BAN ĐẦU ĐÃ ĐƯỢC SỬA LẠI".
 
 | Việc | Vì sao | Ai làm |
 |---|---|---|
-| Xoá `services/_deprecated-api-v0` | Thao tác xoá hàng loạt bị chặn trong môi trường máy ảo | Chạy `git rm -r services/_deprecated-api-v0` trên máy |
 | P0-10 staging (VPS + domain + TLS) | Cần mua VPS và tên miền | Tech Lead |
 | P0-11 quản lý secret | Cần chọn SOPS hay Doppler rồi cấp khoá | Tech Lead |
 | P0-18 backup PITR | Phụ thuộc P0-10 | Tech Lead |

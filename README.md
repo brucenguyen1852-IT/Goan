@@ -7,8 +7,7 @@ Monorepo cho toàn bộ hệ thống GoAn: một backend duy nhất phục vụ 
 ```
 goan/
 ├── services/
-│   ├── api/                    Backend duy nhất — FastAPI modular monolith  ← NGUỒN SỰ THẬT
-│   └── _deprecated-api-v0/     Bản nháp cũ, KHÔNG dùng, sẽ xoá (xem ghi chú bên dưới)
+│   └── api/                    Backend duy nhất — FastAPI modular monolith  ← NGUỒN SỰ THẬT
 ├── apps/
 │   ├── customer-web/           Web MVP cho khách
 │   └── ops-console/            Console vận hành nội bộ (IAM, duyệt tài xế, tra cứu chuyến)
@@ -129,8 +128,3 @@ python3 services/api/scripts/export_openapi.py packages/api-client/openapi.json
 
 CI sẽ báo đỏ nếu client và backend lệch nhau.
 
-## Ghi chú về `services/_deprecated-api-v0`
-
-Đây là bản backend đầu tiên (9 endpoint, 1 file test), đã bị `services/api` thay thế hoàn toàn.
-Giữ tạm để đối chiếu lịch sử, **không sửa và không import**. Sẽ xoá sau khi `apps/customer-web`
-chuyển xong sang API mới.

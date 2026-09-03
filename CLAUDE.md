@@ -10,8 +10,8 @@ pnpm + turbo: **một** backend duy nhất phục vụ 5 sản phẩm frontend (
 | Thư mục | Vai trò |
 |---|---|
 | `services/api` | Backend FastAPI — **nguồn sự thật** của toàn hệ thống |
-| `services/_deprecated-api-v0` | Bản nháp cũ. **Không sửa, không import, không đọc để tham chiếu** |
 | `apps/customer-web` | Web MVP cho khách (React + Vite + Zustand + axios) |
+| `apps/ops-console` | Console vận hành nội bộ (React + Vite, đăng nhập 2FA, RBAC) |
 | `packages/api-client` | Client TS sinh từ OpenAPI — contract giữa backend và mọi frontend |
 | `docs/` | PRD: kiến trúc, luồng thanh toán, phân định hệ thống + `docs/QA/` |
 
