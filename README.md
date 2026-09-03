@@ -10,13 +10,14 @@ goan/
 │   ├── api/                    Backend duy nhất — FastAPI modular monolith  ← NGUỒN SỰ THẬT
 │   └── _deprecated-api-v0/     Bản nháp cũ, KHÔNG dùng, sẽ xoá (xem ghi chú bên dưới)
 ├── apps/
-│   └── customer-web/           Web MVP cho khách (đang phải viết lại tầng API)
+│   ├── customer-web/           Web MVP cho khách
+│   └── ops-console/            Console vận hành nội bộ (IAM, duyệt tài xế, tra cứu chuyến)
 ├── packages/                   api-client, realtime-client, ui, shared (sẽ thêm dần)
 ├── docs/                       Tài liệu kiến trúc & kế hoạch
 └── .github/workflows/          CI
 ```
 
-Các sản phẩm sẽ bổ sung theo lộ trình: `apps/rider-app`, `apps/driver-app`, `apps/ops-console`,
+Các sản phẩm sẽ bổ sung theo lộ trình: `apps/rider-app`, `apps/driver-app`,
 `apps/partner-portal`, `apps/website` — xem `docs/GoAn_Phan_Dinh_He_Thong_va_Kien_Truc_Production.md`.
 
 ## Tài liệu

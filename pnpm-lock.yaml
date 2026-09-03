@@ -61,6 +61,37 @@ importers:
         specifier: ^5.4.6
         version: 5.4.21
 
+  apps/ops-console:
+    dependencies:
+      '@goan/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+      react-router-dom:
+        specifier: ^6.26.2
+        version: 6.30.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.5
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ^18.3.0
+        version: 18.3.7(@types/react@18.3.31)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.1
+        version: 4.7.0(vite@5.4.21)
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+      vite:
+        specifier: ^5.4.6
+        version: 5.4.21
+
   packages/api-client:
     dependencies:
       openapi-fetch:

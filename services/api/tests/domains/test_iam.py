@@ -431,3 +431,71 @@ async def test_khong_co_quyen_doc_audit_thi_khong_doc_duoc(db, api_client):
 
     assert response.status_code == 403
     assert response.json()["error"]["details"]["required_permission"] == "audit:log:read"
+
+
+# --- Phiên làm việc -------------------------------------------------------------------
+
+
+@pytest.mark.security
+@pytest.mark.api
+async def test_lam_moi_token_trong_phien_va_thu_hoi_khi_dung_lai_token_cu(db, api_client):
+    """Xoay vòng refresh token cho tài khoản nội bộ, giống hệt phía app.
+
+    Test này đỏ khi ai đó bỏ bước `consume` trong endpoint refresh: lúc đó một refresh token
+    bị lộ dùng được mãi trong suốt phiên 8 giờ mà hệ thống không hề biết.
+    """
+    staff = await make_staff(db, email="phien@goan.vn")
+    login = await api_client.post(
+        "/api/v1/ops/auth/login",
+        json={"email": staff.email, "password": PASSWORD, "totp_code": totp_now(staff)},
+    )
+    refresh_token = login.json()["refresh_token"]
+
+    lan_dau = await api_client.post(
+        "/api/v1/ops/auth/refresh", json={"refresh_token": refresh_token}
+    )
+    dung_lai = await api_client.post(
+        "/api/v1/ops/auth/refresh", json={"refresh_token": refresh_token}
+    )
+
+    assert lan_dau.status_code == 200
+    assert lan_dau.json()["session_expires_in"] == settings.STAFF_SESSION_HOURS * 3600
+    assert dung_lai.status_code == 401
+
+    # Cả họ token bị thu hồi: token mới vừa cấp cũng không dùng được nữa.
+    token_moi = lan_dau.json()["refresh_token"]
+    sau_thu_hoi = await api_client.post(
+        "/api/v1/ops/auth/refresh", json={"refresh_token": token_moi}
+    )
+    assert sau_thu_hoi.status_code == 401
+
+
+@pytest.mark.security
+@pytest.mark.api
+async def test_dang_xuat_thu_hoi_ca_phien_chu_khong_chi_xoa_token_o_may(db, api_client):
+    staff = await make_staff(db, email="dangxuat@goan.vn")
+    login = await api_client.post(
+        "/api/v1/ops/auth/login",
+        json={"email": staff.email, "password": PASSWORD, "totp_code": totp_now(staff)},
+    )
+    refresh_token = login.json()["refresh_token"]
+
+    await api_client.post("/api/v1/ops/auth/logout", json={"refresh_token": refresh_token})
+    sau_dang_xuat = await api_client.post(
+        "/api/v1/ops/auth/refresh", json={"refresh_token": refresh_token}
+    )
+
+    assert sau_dang_xuat.status_code == 401
+
+
+@pytest.mark.security
+@pytest.mark.api
+async def test_token_cua_app_khong_dung_duoc_o_endpoint_refresh_noi_bo(db, api_client):
+    rider = await create_rider(db, phone="0909090909")
+    from app.core.security import create_refresh_token
+
+    gia_mao = create_refresh_token(str(rider.id), UserRole.RIDER.value, family="fam", jti="j")
+
+    response = await api_client.post("/api/v1/ops/auth/refresh", json={"refresh_token": gia_mao})
+
+    assert response.status_code == 401

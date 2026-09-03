@@ -24,6 +24,10 @@ from app.domains.pricing.constants import DEFAULT_FARE_RULES
 from app.domains.pricing.models import PricingRule
 from app.domains.users.models import DriverProfile, User
 
+# Nạp TOÀN BỘ model, không chỉ vài model script này dùng: SQLAlchemy cần thấy đủ bảng để
+# phân giải khoá ngoại. Thiếu một bảng là NoReferencedTableError ngay lúc mở phiên đầu tiên.
+from app.models_registry import Base  # noqa: F401
+
 RIDERS = [
     ("0901000001", "Nguyễn Văn Khách"),
     ("0901000002", "Trần Thị Khách"),
