@@ -1,6 +1,6 @@
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "@/auth/useAuth";
-import { Button } from "@/components/ui";
+import { Button } from "@goan/ui";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import { AuditPage } from "@/pages/AuditPage";
 import { DriversPage } from "@/pages/DriversPage";

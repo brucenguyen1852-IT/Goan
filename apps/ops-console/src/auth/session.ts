@@ -47,3 +47,33 @@ export function subscribe(listener: Listener): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
+
+// --- Nhớ thiết bị (P1-13) ---------------------------------------------------------------
+// Cố tình lưu tách khỏi phiên đăng nhập và KHÔNG xoá khi đăng xuất: đăng xuất là kết thúc ca
+// làm việc, không phải tuyên bố "máy này không còn tin được". Muốn quên máy thì gỡ ở màn hình
+// thiết bị, thao tác đó gọi lên server để token chết thật chứ không chỉ biến mất khỏi trình duyệt.
+const DEVICE_KEY = "goan.ops.device";
+
+export function getDeviceToken(): string | null {
+  try {
+    return localStorage.getItem(DEVICE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setDeviceToken(token: string): void {
+  try {
+    localStorage.setItem(DEVICE_KEY, token);
+  } catch {
+    /* trình duyệt chặn lưu trữ: lần sau nhập lại mã, không sao */
+  }
+}
+
+export function forgetDeviceToken(): void {
+  try {
+    localStorage.removeItem(DEVICE_KEY);
+  } catch {
+    /* không sao */
+  }
+}

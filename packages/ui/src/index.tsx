@@ -1,5 +1,13 @@
 /**
- * Vài thành phần dùng chung. Sẽ tách ra `packages/ui` khi Partner Portal cần dùng lại (P1-14).
+ * Bộ thành phần web dùng chung (P1-14).
+ *
+ * Nằm ở `packages/` chứ không trong một app cụ thể vì Partner Portal (P6) và Console dùng
+ * chung: bảng, thẻ, nhãn trạng thái, nút. Chỉ có JSX và class CSS — **không** kèm stylesheet.
+ * App nào dùng thì tự nạp bảng màu của mình, nhờ vậy Partner Portal mang thương hiệu đối tác
+ * mà vẫn dùng lại đúng những thành phần này.
+ *
+ * Quy ước class: `card`, `badge badge-{ok|warn|bad|muted}`, `btn btn-{default|primary|danger}`,
+ * `table-wrap`, `empty`, `error`. Xem `apps/ops-console/src/index.css` để biết bản cài đặt mẫu.
  */
 import type { ReactNode } from "react";
 

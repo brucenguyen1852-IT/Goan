@@ -41,15 +41,38 @@ bắt buộc có `reason` và ghi vĩnh viễn vào nhật ký. Đừng thêm đ
 
 **Bí mật TOTP chỉ hiện một lần** ngay sau khi tạo tài khoản. Không có endpoint nào đọc lại được.
 
+**Nhớ máy 30 ngày chỉ bỏ qua bước nhập mã, không bỏ qua mật khẩu.** Token nhớ máy lưu tách
+khỏi phiên và KHÔNG bị xoá khi đăng xuất: đăng xuất là hết ca làm việc, không phải tuyên bố
+"máy này không còn tin được". Muốn quên máy thì gỡ ở màn hình thiết bị — thao tác đó gọi lên
+server để token chết thật.
+
 **Một lần refresh tại một thời điểm.** Backend xoay vòng refresh token; hai request cùng gọi
 refresh thì request thứ hai dùng token đã tiêu và cả phiên bị thu hồi. Biến `refreshing` trong
 `src/api/client.ts` giữ ràng buộc đó.
+
+## Kiểm thử
+
+```bash
+pnpm --filter @goan/ops-console test
+```
+
+Bộ test trả lời đúng một câu: **mỗi vai trò có thấy đúng phần được phép không?** Nó không thay
+thế 92 test phân quyền ở backend — ẩn menu không phải là phân quyền — mà bảo đảm người vận hành
+không nhìn thấy những nút bấm vào chỉ nhận 403.
+
+## Bản đồ
+
+Leaflet + nền OpenStreetMap: chạy được ngay, không cần khoá API, không cần hợp đồng với ai.
+Đổi sang Goong (tên đường Việt Nam sát thực tế hơn) chỉ là đổi URL tile và thêm khoá trong
+`src/components/FleetMap.tsx` — không phải viết lại màn hình.
+
+Vị trí tài xế đến từ WebSocket `/ws/ops/fleet`, backend gom 3 giây một lần. Nếu WS không mở
+được (mạng công ty chặn, proxy cũ) thì Console tự lùi về hỏi lại mỗi 5 giây — chỉ báo ●/○ ở
+đầu trang cho biết đang chạy ở chế độ nào.
 
 ## Phần còn thiếu
 
 | Hạng mục | Hiện tại |
 |---|---|
-| Bản đồ Live Ops | Bảng toạ độ, chưa tích hợp Goong/Mapbox (P1-16) |
-| Đẩy real-time | Hỏi lại mỗi 5 giây; WS `ops.fleet_update` thuộc P2 |
-| Design system dùng chung | `src/components/ui.tsx`, sẽ tách ra `packages/ui` khi Partner Portal cần (P1-14) |
-| Sửa quyền của vai trò từ giao diện | Màn hình vai trò đang chỉ đọc; API `iam:role:write` chưa có |
+| Nền bản đồ tiếng Việt | OpenStreetMap; chuyển Goong khi có khoá API |
+| Thao tác hàng loạt | Duyệt từng hồ sơ một; chưa có chọn nhiều |

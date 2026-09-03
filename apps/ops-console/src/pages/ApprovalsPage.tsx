@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/api/client";
 import { useAuth } from "@/auth/useAuth";
-import { Badge, Button, Card, Empty, ErrorText, Table } from "@/components/ui";
+import { Badge, Button, Card, Empty, ErrorText, Table } from "@goan/ui";
+
+/** API trả về hình dạng lạ (proxy chèn trang lỗi, gateway trả HTML) không được làm trắng
+ * màn hình Console. Thà hiện danh sách rỗng còn hơn để người vận hành nhìn tab trắng. */
+function asList<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
 
 interface Approval {
   id: string;
@@ -22,7 +29,7 @@ export function ApprovalsPage() {
 
   const load = useCallback(async () => {
     try {
-      setRows(await api.get<Approval[]>("/ops/approvals?status=pending"));
+      setRows(asList<Approval>(await api.get("/ops/approvals?status=pending")));
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không tải được hàng đợi duyệt");

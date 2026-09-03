@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/api/client";
-import { Badge, Button, Card, Empty, ErrorText, Table } from "@/components/ui";
+import { Badge, Button, Card, Empty, ErrorText, Table } from "@goan/ui";
+
+/** API trả về hình dạng lạ (proxy chèn trang lỗi, gateway trả HTML) không được làm trắng
+ * màn hình Console. Thà hiện danh sách rỗng còn hơn để người vận hành nhìn tab trắng. */
+function asList<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
 
 interface AuditRow {
   id: string;
@@ -27,7 +34,7 @@ export function AuditPage() {
       const page = await api.get<{ items: AuditRow[]; next_cursor: string | null }>(
         `/ops/audit-logs?${query}`,
       );
-      setRows(page.items);
+      setRows(asList<AuditRow>(page.items));
       setCursor(page.next_cursor);
       setError("");
     } catch (err) {
@@ -46,7 +53,7 @@ export function AuditPage() {
     const page = await api.get<{ items: AuditRow[]; next_cursor: string | null }>(
       `/ops/audit-logs?${query}`,
     );
-    setRows((prev) => [...prev, ...page.items]);
+    setRows((prev) => [...prev, ...asList<AuditRow>(page.items)]);
     setCursor(page.next_cursor);
   }
 

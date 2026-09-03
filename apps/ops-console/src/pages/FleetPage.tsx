@@ -1,15 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Badge, Card, Empty, ErrorText, Table } from "@goan/ui";
+import { FleetMap } from "@/components/FleetMap";
+import { getSession } from "@/auth/session";
 import { api } from "@/api/client";
-import { Badge, Card, Empty, ErrorText, Table } from "@/components/ui";
 
-interface FleetDriver {
+export interface FleetDriver {
   driver_id: string;
   full_name_masked: string | null;
   online_status: string;
   lat: number | null;
   lng: number | null;
-  rating_avg: string;
-  total_trips: number;
   current_trip_id: string | null;
 }
 
@@ -21,15 +21,20 @@ interface Snapshot {
   drivers: FleetDriver[];
 }
 
-const REFRESH_MS = 5000;
+/** Hỏi lại mỗi 5 giây, chỉ dùng khi WebSocket không mở được (mạng chặn, proxy cũ). */
+const POLL_MS = 5000;
 
 export function FleetPage() {
   const [data, setData] = useState<Snapshot | null>(null);
+  const [live, setLive] = useState(false);
   const [error, setError] = useState("");
+  const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     let alive = true;
-    async function tick() {
+    let poller: ReturnType<typeof setInterval> | null = null;
+
+    async function poll() {
       try {
         const snapshot = await api.get<Snapshot>("/ops/fleet");
         if (alive) setData(snapshot);
@@ -37,11 +42,35 @@ export function FleetPage() {
         if (alive) setError(err instanceof Error ? err.message : "Không tải được dữ liệu");
       }
     }
-    void tick();
-    const timer = setInterval(tick, REFRESH_MS);
+
+    // Backend đẩy ảnh chụp mỗi 3 giây qua WS. Hỏi lại theo chu kỳ chỉ là đường lui khi WS
+    // không mở được — giữ cả hai để Console không bao giờ đứng hình.
+    const token = getSession()?.accessToken;
+    if (token) {
+      const url = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/ops/fleet?token=${token}`;
+      try {
+        const socket = new WebSocket(url);
+        socketRef.current = socket;
+        socket.onmessage = (event) => {
+          const message = JSON.parse(event.data);
+          if (message.type === "ops.fleet_update" && alive) {
+            setData(message.data);
+            setLive(true);
+          }
+        };
+        socket.onclose = () => alive && setLive(false);
+        socket.onerror = () => alive && setLive(false);
+      } catch {
+        setLive(false);
+      }
+    }
+
+    void poll();
+    poller = setInterval(poll, POLL_MS);
     return () => {
       alive = false;
-      clearInterval(timer);
+      if (poller) clearInterval(poller);
+      socketRef.current?.close();
     };
   }, []);
 
@@ -51,20 +80,22 @@ export function FleetPage() {
         <Stat label="Tài xế online" value={data?.drivers_online ?? 0} />
         <Stat label="Đang chạy chuyến" value={data?.drivers_on_trip ?? 0} />
         <Stat label="Chuyến đang diễn ra" value={data?.trips_active ?? 0} />
+        <div className="stat">
+          <span className="stat-value">{live ? "●" : "○"}</span>
+          <span className="stat-label">{live ? "Đang nhận real-time" : "Đang hỏi lại 5 giây/lần"}</span>
+        </div>
       </div>
 
-      <Card title="Đội xe theo thời gian thực">
+      <Card title="Bản đồ đội xe">
         <ErrorText>{error}</ErrorText>
-        {/* Bản đồ thật (Goong/Mapbox) là P1-16. Bảng toạ độ dưới đây đã đủ để điều phối
-            biết ai đang ở đâu, và không phụ thuộc vào việc chọn nhà cung cấp bản đồ. */}
-        <p className="muted">
-          Làm mới mỗi {REFRESH_MS / 1000} giây
-          {data ? ` · lúc ${new Date(data.taken_at).toLocaleTimeString("vi-VN")}` : ""}
-        </p>
+        <FleetMap drivers={data?.drivers ?? []} />
+      </Card>
+
+      <Card title="Danh sách tài xế đang trực">
         {data && data.drivers.length === 0 ? (
           <Empty>Chưa có tài xế nào online.</Empty>
         ) : (
-          <Table head={["Tài xế", "Trạng thái", "Vị trí", "Đánh giá", "Số chuyến", "Chuyến hiện tại"]}>
+          <Table head={["Tài xế", "Trạng thái", "Vị trí", "Chuyến hiện tại"]}>
             {(data?.drivers ?? []).map((d) => (
               <tr key={d.driver_id}>
                 <td>{d.full_name_masked ?? "—"}</td>
@@ -76,8 +107,6 @@ export function FleetPage() {
                 <td className="mono">
                   {d.lat != null && d.lng != null ? `${d.lat.toFixed(4)}, ${d.lng.toFixed(4)}` : "—"}
                 </td>
-                <td>{d.rating_avg}</td>
-                <td>{d.total_trips}</td>
                 <td className="mono">{d.current_trip_id?.slice(0, 8) ?? "—"}</td>
               </tr>
             ))}

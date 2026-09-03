@@ -121,4 +121,5 @@ jobs:
         run: pnpm --filter @goan/api-client generate
       - run: pnpm --filter @goan/api-client typecheck
       - run: pnpm typecheck
+      - run: pnpm test
       - run: pnpm build

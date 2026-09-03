@@ -14,7 +14,14 @@ import {
   type ReactNode,
 } from "react";
 import { api } from "@/api/client";
-import { clearSession, getSession, setTokens, subscribe } from "@/auth/session";
+import {
+  clearSession,
+  getDeviceToken,
+  getSession,
+  setDeviceToken,
+  setTokens,
+  subscribe,
+} from "@/auth/session";
 
 export interface Me {
   id: string;
@@ -27,7 +34,12 @@ export interface Me {
 interface AuthState {
   me: Me | null;
   loading: boolean;
-  login: (email: string, password: string, totpCode: string) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+    totpCode: string,
+    rememberDevice?: boolean,
+  ) => Promise<void>;
   logout: () => Promise<void>;
   can: (permission: string) => boolean;
 }
@@ -62,12 +74,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadMe]);
 
   const login = useCallback(
-    async (email: string, password: string, totpCode: string) => {
-      const tokens = await api.post<{ access_token: string; refresh_token: string }>(
-        "/ops/auth/login",
-        { email, password, totp_code: totpCode },
-      );
+    async (email: string, password: string, totpCode: string, rememberDevice = false) => {
+      const tokens = await api.post<{
+        access_token: string;
+        refresh_token: string;
+        device_token: string | null;
+      }>("/ops/auth/login", {
+        email,
+        password,
+        totp_code: totpCode,
+        device_token: getDeviceToken() ?? "",
+        remember_device: rememberDevice,
+        device_label: navigator.userAgent.slice(0, 120),
+      });
       setTokens(tokens.access_token, tokens.refresh_token);
+      // Token nhớ máy chỉ trả về đúng một lần, ngay sau khi bật.
+      if (tokens.device_token) setDeviceToken(tokens.device_token);
       await loadMe();
     },
     [loadMe],

@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/api/client";
 import { useAuth } from "@/auth/useAuth";
-import { Badge, Button, Card, Empty, ErrorText, Table } from "@/components/ui";
+import { Badge, Button, Card, Empty, ErrorText, Table } from "@goan/ui";
+
+/** API trả về hình dạng lạ (proxy chèn trang lỗi, gateway trả HTML) không được làm trắng
+ * màn hình Console. Thà hiện danh sách rỗng còn hơn để người vận hành nhìn tab trắng. */
+function asList<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
 
 interface OpsDriver {
   driver_id: string;
@@ -35,7 +42,7 @@ export function DriversPage() {
   const load = useCallback(async () => {
     try {
       const query = filter ? `?approval_status=${filter}` : "";
-      setRows(await api.get<OpsDriver[]>(`/ops/drivers${query}`));
+      setRows(asList<OpsDriver>(await api.get(`/ops/drivers${query}`)));
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không tải được danh sách");

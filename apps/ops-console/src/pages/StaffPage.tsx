@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { api } from "@/api/client";
 import { useAuth } from "@/auth/useAuth";
-import { Badge, Button, Card, Empty, ErrorText, Table } from "@/components/ui";
+import { Badge, Button, Card, Empty, ErrorText, Table } from "@goan/ui";
+
+/** API trả về hình dạng lạ (proxy chèn trang lỗi, gateway trả HTML) không được làm trắng
+ * màn hình Console. Thà hiện danh sách rỗng còn hơn để người vận hành nhìn tab trắng. */
+function asList<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
 
 interface Staff {
   id: string;
@@ -31,8 +38,8 @@ export function StaffPage() {
   const load = useCallback(async () => {
     try {
       const query = showInactive ? "?include_inactive=true" : "";
-      setRows(await api.get<Staff[]>(`/ops/staff${query}`));
-      if (can("iam:role:read")) setRoles(await api.get<Role[]>("/ops/roles"));
+      setRows(asList<Staff>(await api.get(`/ops/staff${query}`)));
+      if (can("iam:role:read")) setRoles(asList<Role>(await api.get("/ops/roles")));
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không tải được danh sách");

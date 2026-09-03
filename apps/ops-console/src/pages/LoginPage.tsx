@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "@/auth/useAuth";
-import { Button, ErrorText } from "@/components/ui";
+import { Button, ErrorText } from "@goan/ui";
 
 export function LoginPage() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -15,7 +16,7 @@ export function LoginPage() {
     setBusy(true);
     setError("");
     try {
-      await login(email, password, totp);
+      await login(email, password, totp, remember);
     } catch (err) {
       // Backend cố tình trả cùng một thông điệp cho email lạ / sai mật khẩu / sai mã,
       // nên hiện nguyên văn là đủ và không lộ email nào có thật.
@@ -63,11 +64,23 @@ export function LoginPage() {
           />
         </label>
 
+        <label className="inline">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+          />
+          Nhớ máy này 30 ngày
+        </label>
+
         <ErrorText>{error}</ErrorText>
         <Button type="submit" kind="primary" disabled={busy}>
           {busy ? "Đang kiểm tra…" : "Đăng nhập"}
         </Button>
-        <p className="hint">Sai 5 lần liên tiếp, tài khoản bị khoá tạm thời 15 phút.</p>
+        <p className="hint">
+          Sai 5 lần liên tiếp, tài khoản bị khoá tạm thời 15 phút. Nhớ máy chỉ bỏ qua bước
+          nhập mã — mật khẩu thì lần nào cũng phải gõ.
+        </p>
       </form>
     </div>
   );

@@ -112,6 +112,23 @@ label.inline { flex-direction: row; align-items: center; gap: 6px; }
 .stat-value { display: block; font-size: 26px; font-weight: 700; }
 .stat-label { color: var(--muted); font-size: 12px; }
 
+/* Ma trận quyền */
+.perm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 6px;
+  margin-bottom: 12px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+/* Bản đồ đội xe */
+.map { height: 420px; border-radius: 8px; overflow: hidden; }
+.leaflet-container { background: #0f1419; }
+.pin { border-radius: 50%; border: 2px solid #0f1419; box-shadow: 0 0 0 1px rgba(0,0,0,.4); }
+.pin-online { background: #4ade80; }
+.pin-ontrip { background: #fbbf24; }
+
 /* Đăng nhập */
 .login { min-height: 100vh; display: grid; place-items: center; }
 .login-box {

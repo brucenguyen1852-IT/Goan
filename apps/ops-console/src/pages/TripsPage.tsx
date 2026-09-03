@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/api/client";
-import { Badge, Button, Card, Empty, ErrorText, Table } from "@/components/ui";
+import { Badge, Button, Card, Empty, ErrorText, Table } from "@goan/ui";
+
+/** API trả về hình dạng lạ (proxy chèn trang lỗi, gateway trả HTML) không được làm trắng
+ * màn hình Console. Thà hiện danh sách rỗng còn hơn để người vận hành nhìn tab trắng. */
+function asList<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
 
 interface OpsTrip {
   id: string;
@@ -43,7 +50,7 @@ export function TripsPage() {
       const page = await api.get<{ items: OpsTrip[]; next_cursor: string | null }>(
         `/ops/trips?${query}`,
       );
-      setRows(page.items);
+      setRows(asList<OpsTrip>(page.items));
       setCursor(page.next_cursor);
       setError("");
     } catch (err) {
@@ -62,7 +69,7 @@ export function TripsPage() {
     const page = await api.get<{ items: OpsTrip[]; next_cursor: string | null }>(
       `/ops/trips?${query}`,
     );
-    setRows((prev) => [...prev, ...page.items]);
+    setRows((prev) => [...prev, ...asList<OpsTrip>(page.items)]);
     setCursor(page.next_cursor);
   }
 
