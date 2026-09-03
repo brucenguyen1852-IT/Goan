@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.geo import haversine_km
@@ -16,6 +16,21 @@ async def get_trip(db: AsyncSession, trip_id: uuid.UUID) -> Trip | None:
 async def get_trip_by_idempotency_key(db: AsyncSession, key: str) -> Trip | None:
     stmt = select(Trip).where(Trip.idempotency_key == key)
     return (await db.execute(stmt)).scalar_one_or_none()
+
+
+async def list_trips_for_user(
+    db: AsyncSession, user_id: uuid.UUID, *, limit: int = 20, before: datetime | None = None
+) -> list[Trip]:
+    """Lịch sử chuyến, mới nhất trước. Phân trang bằng con trỏ thời gian, không dùng OFFSET.
+
+    OFFSET chậm dần khi dữ liệu lớn và có thể bỏ sót/lặp bản ghi khi có chuyến mới chen vào
+    giữa hai lần gọi.
+    """
+    stmt = select(Trip).where(or_(Trip.rider_id == user_id, Trip.driver_id == user_id))
+    if before is not None:
+        stmt = stmt.where(Trip.requested_at < before)
+    stmt = stmt.order_by(Trip.requested_at.desc()).limit(min(limit, 100))
+    return list((await db.execute(stmt)).scalars().all())
 
 
 async def list_gps_logs(db: AsyncSession, trip_id: uuid.UUID) -> list[TripGpsLog]:

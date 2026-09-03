@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { verifyOtp } from "@/api/auth";
+import { apiMessage } from "@/api/client";
 import { useAuthStore } from "@/store/authStore";
 
 export function OtpVerifyPage() {
@@ -10,8 +11,10 @@ export function OtpVerifyPage() {
   const navigate = useNavigate();
   const setTokens = useAuthStore((s) => s.setTokens);
 
-  const phone = (location.state as { phone?: string } | null)?.phone;
-  const [otp, setOtp] = useState("");
+  const state = location.state as { phone?: string; debugOtp?: string | null } | null;
+  const phone = state?.phone;
+  const [otp, setOtp] = useState(state?.debugOtp ?? "");
+  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,11 +32,11 @@ export function OtpVerifyPage() {
     setError(null);
     setLoading(true);
     try {
-      const tokens = await verifyOtp(phone as string, otp);
+      const tokens = await verifyOtp(phone as string, otp, fullName);
       setTokens(tokens.access_token, tokens.refresh_token, phone as string);
       navigate("/", { replace: true });
-    } catch {
-      setError("Mã OTP không đúng hoặc đã hết hạn. Vui lòng thử lại.");
+    } catch (err) {
+      setError(apiMessage(err, "Mã OTP không đúng hoặc đã hết hạn. Vui lòng thử lại."));
     } finally {
       setLoading(false);
     }
@@ -57,6 +60,13 @@ export function OtpVerifyPage() {
           onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
           autoFocus
         />
+        <Input
+          label="Họ và tên"
+          placeholder="Nguyễn Văn A"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+        />
+        <p className="text-xs text-white/40">Chỉ cần điền khi đăng ký lần đầu.</p>
         {error && <p className="text-sm text-red-400">{error}</p>}
         <Button type="submit" fullWidth disabled={loading}>
           {loading ? "Đang xác thực..." : "Xác nhận"}

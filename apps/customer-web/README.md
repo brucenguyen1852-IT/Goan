@@ -1,52 +1,54 @@
-# GoAn Customer App (Web MVP — React + Vite + TypeScript)
+# @goan/customer-web
 
-Skeleton frontend cho khách hàng đặt tài xế lái hộ. Đây là bản **web** (chạy trong trình duyệt,
-tối ưu bố cục cho màn hình điện thoại) để MVP có thể dùng thử kinh doanh ngay mà không cần build
-native app + qua duyệt App Store/Play Store trước. Khi sản phẩm cần app native thật (map SDK mượt
-hơn, push notification, chạy nền GPS...), phần lớn `api/`, `store/`, `types/` có thể tái sử dụng
-gần như nguyên vẹn khi port sang React Native.
+Web MVP cho khách hàng. Bản React Native chính thức sẽ thay thế ở giai đoạn P4; đến lúc đó
+app này vẫn là kênh đặt xe dự phòng chạy trên trình duyệt.
 
-## Cấu trúc thư mục
-
-```
-src/
-  api/          # gọi REST API backend (axios) — auth, trips, history
-  store/        # Zustand global state — authStore, tripStore
-  pages/        # các màn hình: Login, OtpVerify, Home (đặt xe), TripTracking, History, Profile
-  components/
-    layout/     # AppLayout (bottom nav), RequireAuth (route guard)
-    map/        # MapPlaceholder — chỗ cắm map SDK thật
-    ui/         # Button, Input, TripStatusBadge — design system tối giản
-  hooks/        # useTripTrackingSocket — WebSocket theo dõi chuyến real-time
-  types/        # TypeScript types khớp với Pydantic schemas của backend
-```
-
-## Chạy local
+## Chạy
 
 ```bash
-npm install
-npm run dev
+# 1. Backend (cửa sổ khác)
+cd ../../services/api && uvicorn app.main:app --port 8000
+
+# 2. App
+pnpm dev        # http://localhost:5173
 ```
 
-Mặc định `vite.config.ts` proxy `/api` và `/ws` sang `http://localhost:8000` (backend FastAPI) —
-chạy backend trước (xem `goan-backend/README.md`) rồi mới chạy frontend.
+Vite proxy sẵn `/api` và `/ws` sang `localhost:8000` nên không vướng CORS khi dev.
 
-## Luồng đã implement trong skeleton này
+## Tài khoản mẫu (sau khi chạy `python -m scripts.seed` ở backend)
 
-1. Đăng nhập bằng SĐT + OTP (`LoginPage` → `OtpVerifyPage`)
-2. Xem giá cước ước tính + chọn phương thức thanh toán (Online/Tiền mặt) (`HomePage`)
-3. Đặt chuyến, theo dõi trạng thái + vị trí tài xế real-time qua WebSocket (`TripTrackingPage`)
-4. Hủy chuyến khi còn ở trạng thái cho phép
-5. Lịch sử chuyến đi (`TripHistoryPage`) — **lưu ý**: cần bổ sung endpoint `GET /trips` (list theo
-   customer) ở backend trước khi dùng thật, hiện backend skeleton mới có `GET /trips/{id}`.
-6. Trang tài khoản + đăng xuất (`ProfilePage`)
+| Vai trò | SĐT |
+|---|---|
+| Khách | 0901000001, 0901000002 |
+| Tài xế | 0902000001, 0902000002, 0902000003 |
 
-## Việc cần làm tiếp (chưa có trong skeleton)
+Ở môi trường dev (`DEBUG=true`) backend trả kèm `debug_otp`, app tự điền vào ô OTP nên không
+cần dựng SMS thật.
 
-- Tích hợp map SDK thật (Goong Maps/Mapbox) thay cho `MapPlaceholder`, gồm: hiển thị vị trí hiện
-  tại của khách, chọn điểm đón/đến trên bản đồ, animate vị trí tài xế.
-- Ô tìm kiếm địa chỉ có autocomplete (hiện `HomePage` demo với 2 điểm cố định).
-- Màn hình quét mã QR tài xế (dùng `getUserMedia`/thư viện quét QR) khi trạng thái `driver_arriving`.
-- Tích hợp cổng thanh toán thật khi chọn "Thanh toán online" (redirect/deep-link sang VNPay/MoMo).
-- Đánh giá tài xế sau khi hoàn thành chuyến (trạng thái `completed` → `rated`).
-- i18n nếu cần hỗ trợ thêm ngôn ngữ ngoài tiếng Việt.
+## Điểm cần biết khi sửa
+
+**Không viết tay đường dẫn API.** Contract nằm ở `packages/api-client/openapi.json`, sinh từ
+backend. Trước đây app này tự đặt tên endpoint và đã lệch hoàn toàn khỏi backend
+(`/auth/otp/request` vs `/auth/request-otp`, `/trips/fare-estimate` vs `/pricing/estimate`) —
+không ai phát hiện cho tới khi chạy thật.
+
+**Tiền là chuỗi, không phải số.** Backend trả `Decimal` dưới dạng chuỗi để không mất chính xác
+khi qua JSON. Dùng `formatVnd()` trong `src/types` để hiển thị, đừng ép sang `number` rồi tính toán.
+
+**Access token sống 15 phút.** `src/api/client.ts` tự làm mới khi gặp 401 và phát lại request.
+Backend xoay vòng refresh token nên chỉ được có đúng một lần refresh chạy tại một thời điểm —
+nếu hai request cùng gọi refresh, request thứ hai dùng token đã tiêu và backend sẽ thu hồi cả
+phiên. Biến `refreshing` trong file đó giữ ràng buộc này, đừng bỏ đi.
+
+**Đăng xuất phải gọi backend.** Chỉ xoá token trong máy thì refresh token vẫn sống 30 ngày ở
+phía server.
+
+## Phần còn thiếu (P4)
+
+| Hạng mục | Hiện tại |
+|---|---|
+| Bản đồ | `MapPlaceholder` — chưa tích hợp Goong/Mapbox |
+| Địa chỉ | Hai điểm cố định ở TP.HCM, chưa có autocomplete |
+| Quét QR | Nhập tay mã; app React Native sẽ dùng camera |
+| Thanh toán | Chưa có màn hình liên kết thẻ/ví |
+| Chia sẻ hành trình, SOS | Chưa có |

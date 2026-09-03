@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { requestOtp } from "@/api/auth";
+import { apiMessage } from "@/api/client";
 
 export function LoginPage() {
   const [phone, setPhone] = useState("");
@@ -22,10 +23,11 @@ export function LoginPage() {
 
     setLoading(true);
     try {
-      await requestOtp(phone);
-      navigate("/otp", { state: { phone } });
-    } catch {
-      setError("Không gửi được mã OTP. Vui lòng thử lại sau.");
+      const res = await requestOtp(phone);
+      // Ở môi trường dev backend trả kèm debug_otp để khỏi phải dựng SMS thật.
+      navigate("/otp", { state: { phone, debugOtp: res.debug_otp } });
+    } catch (err) {
+      setError(apiMessage(err, "Không gửi được mã OTP. Vui lòng thử lại sau."));
     } finally {
       setLoading(false);
     }

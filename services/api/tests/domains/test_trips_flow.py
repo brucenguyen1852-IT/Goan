@@ -136,3 +136,81 @@ async def test_rider_cancel_after_grace_period_charges_fee(db):
 
     assert trip.status is TripStatus.CANCELLED_BY_RIDER
     assert trip.cancellation_fee == Decimal("20000")
+
+
+# --- QA-TRIP-LIST — lịch sử chuyến (PRD-TRIP-07) -------------------------
+
+
+@pytest.mark.integration
+@pytest.mark.prd
+async def test_khach_chi_thay_chuyen_cua_minh(db):
+    """QA-TRIP-10: rò rỉ chuyến của người khác là lỗi quyền riêng tư nghiêm trọng."""
+    from app.domains.trips import repository as trips_repo
+
+    rider_a = await create_rider(db, phone="0900001111")
+    rider_b = await create_rider(db, phone="0900002222")
+    trip_a = await create_trip(db, rider_a)
+    await create_trip(db, rider_b)
+
+    got = await trips_repo.list_trips_for_user(db, rider_a.id)
+
+    assert [t.id for t in got] == [trip_a.id]
+
+
+@pytest.mark.integration
+@pytest.mark.prd
+async def test_tai_xe_thay_chuyen_minh_chay(db):
+    """QA-TRIP-11: cùng một endpoint phục vụ hai vai trò với hai phạm vi dữ liệu khác nhau."""
+    from app.domains.trips import repository as trips_repo
+
+    rider = await create_rider(db)
+    driver_user, _ = await create_driver(db)
+    trip = await create_trip(db, rider, driver_user)
+
+    got = await trips_repo.list_trips_for_user(db, driver_user.id)
+
+    assert [t.id for t in got] == [trip.id]
+
+
+@pytest.mark.integration
+async def test_lich_su_sap_xep_moi_nhat_truoc(db):
+    """QA-TRIP-12: khách mở app là thấy ngay chuyến gần nhất, không phải chuyến từ năm ngoái."""
+    from datetime import timedelta
+
+    from app.domains.trips import repository as trips_repo
+
+    rider = await create_rider(db)
+    cu = await create_trip(db, rider)
+    moi = await create_trip(db, rider)
+    cu.requested_at = datetime.now(timezone.utc) - timedelta(days=30)
+    await db.commit()
+
+    got = await trips_repo.list_trips_for_user(db, rider.id)
+
+    assert [t.id for t in got] == [moi.id, cu.id]
+
+
+@pytest.mark.integration
+async def test_phan_trang_bang_con_tro_thoi_gian(db):
+    """QA-TRIP-13: phân trang không được bỏ sót hay lặp khi có chuyến mới chen vào."""
+    from datetime import timedelta
+
+    from app.domains.trips import repository as trips_repo
+
+    rider = await create_rider(db)
+    now = datetime.now(timezone.utc)
+    for i in range(3):
+        t = await create_trip(db, rider)
+        t.requested_at = now - timedelta(hours=i)
+    await db.commit()
+
+    trang_1 = await trips_repo.list_trips_for_user(db, rider.id, limit=2)
+    trang_2 = await trips_repo.list_trips_for_user(
+        db, rider.id, limit=2, before=trang_1[-1].requested_at
+    )
+
+    assert len(trang_1) == 2
+    assert len(trang_2) == 1
+    assert not ({t.id for t in trang_1} & {t.id for t in trang_2}), (
+        "Hai trang không được trùng nhau"
+    )

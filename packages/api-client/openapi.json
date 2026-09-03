@@ -2767,6 +2767,78 @@
       }
     },
     "/api/v1/trips": {
+      "get": {
+        "description": "Lịch sử chuyến của chính người gọi — khách thấy chuyến mình đặt, tài xế thấy chuyến mình chạy.",
+        "operationId": "list_my_trips_api_v1_trips_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Chỉ lấy chuyến đặt trước mốc này (phân trang)",
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Chỉ lấy chuyến đặt trước mốc này (phân trang)",
+              "title": "Before"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TripOut"
+                  },
+                  "title": "Response List My Trips Api V1 Trips Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List My Trips",
+        "tags": [
+          "trips"
+        ]
+      },
       "post": {
         "operationId": "create_trip_api_v1_trips_post",
         "requestBody": {

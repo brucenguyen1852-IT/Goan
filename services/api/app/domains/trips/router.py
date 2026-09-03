@@ -1,6 +1,7 @@
 import uuid
+from datetime import datetime
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,6 +36,20 @@ async def create_trip(
     trip, estimate = await trips_service.create_trip(db, rider, payload)
     await matching_service.start_matching(db, redis, trip)
     return TripCreateResponse(trip=TripOut.model_validate(trip), estimate=estimate)
+
+
+@router.get("", response_model=list[TripOut])
+async def list_my_trips(
+    limit: int = Query(20, ge=1, le=100),
+    before: datetime | None = Query(
+        None, description="Chỉ lấy chuyến đặt trước mốc này (phân trang)"
+    ),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[TripOut]:
+    """Lịch sử chuyến của chính người gọi — khách thấy chuyến mình đặt, tài xế thấy chuyến mình chạy."""
+    trips = await trips_repo.list_trips_for_user(db, user.id, limit=limit, before=before)
+    return [TripOut.model_validate(t) for t in trips]
 
 
 @router.get("/{trip_id}", response_model=TripOut)
