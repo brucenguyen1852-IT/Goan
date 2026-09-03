@@ -33,6 +33,13 @@ trip_event_type = sa.Enum(
 )
 trip_actor_type = sa.Enum("rider", "driver", "admin", "system", name="trip_actor_type")
 
+# Tham chiếu tới kiểu ĐÃ được tạo ở trên. Bắt buộc dùng postgresql.ENUM(create_type=False):
+# sa.Enum(create_type=False) im lặng bỏ qua cờ này — dialect_impl vẫn create_type=True — nên
+# CREATE TABLE sẽ phát lại CREATE TYPE và ngã với "type ... already exists".
+trip_event_type_ref = postgresql.ENUM(name="trip_event_type", create_type=False)
+trip_actor_type_ref = postgresql.ENUM(name="trip_actor_type", create_type=False)
+trip_status_ref = postgresql.ENUM(name="trip_status", create_type=False)
+
 
 def upgrade() -> None:
     bind = op.get_bind()
@@ -68,18 +75,14 @@ def upgrade() -> None:
             sa.ForeignKey("trips.id", ondelete="CASCADE"),
             nullable=False,
         ),
-        sa.Column("event_type", trip_event_type, nullable=False),
-        sa.Column(
-            "from_status",
-            sa.Enum(name="trip_status", create_type=False, native_enum=True),
-            nullable=True,
-        ),
+        sa.Column("event_type", trip_event_type_ref, nullable=False),
+        sa.Column("from_status", trip_status_ref, nullable=True),
         sa.Column(
             "to_status",
-            sa.Enum(name="trip_status", create_type=False, native_enum=True),
+            trip_status_ref,
             nullable=True,
         ),
-        sa.Column("actor_type", trip_actor_type, nullable=False),
+        sa.Column("actor_type", trip_actor_type_ref, nullable=False),
         sa.Column("actor_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("payload", sa.JSON(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),

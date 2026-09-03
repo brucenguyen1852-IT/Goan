@@ -5,6 +5,7 @@ Revises: 0004
 """
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -25,6 +26,10 @@ approval_status = sa.Enum(
     "pending", "approved", "rejected", "expired", "cancelled", name="approval_status"
 )
 
+# Tham chiếu kiểu đã tạo. Dùng sa.Enum ở đây là CREATE TYPE lần hai và ngã.
+approval_kind_ref = postgresql.ENUM(name="approval_kind", create_type=False)
+approval_status_ref = postgresql.ENUM(name="approval_status", create_type=False)
+
 
 def upgrade() -> None:
     bind = op.get_bind()
@@ -34,12 +39,12 @@ def upgrade() -> None:
     op.create_table(
         "approval_requests",
         sa.Column("id", sa.Uuid(), primary_key=True),
-        sa.Column("kind", approval_kind, nullable=False),
-        sa.Column("status", approval_status, nullable=False, server_default="pending"),
+        sa.Column("kind", approval_kind_ref, nullable=False),
+        sa.Column("status", approval_status_ref, nullable=False, server_default="pending"),
         sa.Column("resource_type", sa.String(length=64), nullable=True),
         sa.Column("resource_id", sa.String(length=64), nullable=True),
         sa.Column("amount", sa.Numeric(12, 0), nullable=True),
-        sa.Column("payload", sa.JSON(), nullable=True),
+        sa.Column("payload", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column(
             "requested_by",
             sa.Uuid(),
@@ -56,8 +61,12 @@ def upgrade() -> None:
         sa.Column("decided_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("decision_note", sa.Text(), nullable=True),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
     op.create_index("ix_approval_requests_requested_by", "approval_requests", ["requested_by"])
     op.create_index("ix_approval_requests_decided_by", "approval_requests", ["decided_by"])

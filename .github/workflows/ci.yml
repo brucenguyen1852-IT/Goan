@@ -109,8 +109,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Không khai version ở đây: pnpm/action-setup v4 báo lỗi khi vừa thấy `version` vừa
+      # thấy `packageManager` trong package.json. Nguồn sự thật là package.json.
       - uses: pnpm/action-setup@v4
-        with: { version: 9 }
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -119,4 +120,5 @@ jobs:
       - name: Sinh API client từ OpenAPI đã commit
         run: pnpm --filter @goan/api-client generate
       - run: pnpm --filter @goan/api-client typecheck
+      - run: pnpm typecheck
       - run: pnpm build

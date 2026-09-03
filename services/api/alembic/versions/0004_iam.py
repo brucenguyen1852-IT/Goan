@@ -20,9 +20,8 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), primary_key=True),
         sa.Column("code", sa.String(length=80), nullable=False),
         sa.Column("description", sa.String(length=255), nullable=False, server_default=""),
-        sa.UniqueConstraint("code", name="uq_permissions_code"),
     )
-    op.create_index("ix_permissions_code", "permissions", ["code"])
+    op.create_index("ix_permissions_code", "permissions", ["code"], unique=True)
 
     op.create_table(
         "roles",
@@ -30,11 +29,14 @@ def upgrade() -> None:
         sa.Column("code", sa.String(length=50), nullable=False),
         sa.Column("name", sa.String(length=120), nullable=False),
         sa.Column("is_system", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.UniqueConstraint("code", name="uq_roles_code"),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
-    op.create_index("ix_roles_code", "roles", ["code"])
+    op.create_index("ix_roles_code", "roles", ["code"], unique=True)
 
     op.create_table(
         "role_permissions",
@@ -67,11 +69,14 @@ def upgrade() -> None:
         sa.Column("failed_attempts", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("locked_until", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_login_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.UniqueConstraint("email", name="uq_staff_users_email"),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
-    op.create_index("ix_staff_users_email", "staff_users", ["email"])
+    op.create_index("ix_staff_users_email", "staff_users", ["email"], unique=True)
 
     op.create_table(
         "staff_roles",

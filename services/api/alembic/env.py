@@ -14,6 +14,29 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
+# Những thứ có thật trong DB nhưng KHÔNG mô tả được bằng model, nên `alembic check` luôn coi
+# là "thừa" và đòi xoá:
+#   - spatial_ref_sys: bảng của chính extension PostGIS.
+#   - ix_driver_profiles_geo: index GIST trên hàm geography(ST_MakePoint(...)), viết bằng SQL
+#     thô ở migration 0001 vì SQLAlchemy không diễn đạt được index theo biểu thức này.
+# Bỏ qua chúng để `alembic check` chỉ còn báo những khác biệt thật sự do người viết code gây ra.
+IGNORED_TABLES = {
+    "spatial_ref_sys",
+    "geography_columns",
+    "geometry_columns",
+    "raster_columns",
+    "raster_overviews",
+}
+IGNORED_INDEXES = {"ix_driver_profiles_geo"}
+
+
+def include_object(obj, name, type_, reflected, compare_to) -> bool:
+    if type_ == "table":
+        return name not in IGNORED_TABLES
+    if type_ == "index":
+        return name not in IGNORED_INDEXES
+    return True
+
 
 def run_migrations_offline() -> None:
     context.configure(
@@ -22,13 +45,19 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 def _do_run_migrations(connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
+        include_object=include_object,
+    )
     with context.begin_transaction():
         context.run_migrations()
 

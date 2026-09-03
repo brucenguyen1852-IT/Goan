@@ -5,6 +5,7 @@ Revises: 0005
 """
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -14,13 +15,15 @@ branch_labels = None
 depends_on = None
 
 approval_status = sa.Enum("pending", "approved", "rejected", name="driver_approval_status")
+# Tham chiếu kiểu đã tạo, xem ghi chú ở 0003.
+approval_status_ref = postgresql.ENUM(name="driver_approval_status", create_type=False)
 
 
 def upgrade() -> None:
     approval_status.create(op.get_bind(), checkfirst=True)
     op.add_column(
         "driver_profiles",
-        sa.Column("approval_status", approval_status, nullable=False, server_default="pending"),
+        sa.Column("approval_status", approval_status_ref, nullable=False, server_default="pending"),
     )
     op.add_column(
         "driver_profiles", sa.Column("approval_note", sa.String(length=500), nullable=True)
