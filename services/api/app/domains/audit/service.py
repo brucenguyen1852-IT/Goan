@@ -79,6 +79,7 @@ async def record(
     path: str,
     status_code: int,
     actor_id: uuid.UUID | None = None,
+    actor_staff_id: uuid.UUID | None = None,
     actor_role: str | None = None,
     ip_address: str | None = None,
     user_agent: str | None = None,
@@ -94,6 +95,7 @@ async def record(
 
     entry = AuditLog(
         actor_id=actor_id,
+        actor_staff_id=actor_staff_id,
         actor_role=actor_role,
         action=action,
         method=method,

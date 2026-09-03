@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     OTP_PHONE_WINDOW_SECONDS: int = 300
     OTP_MAX_PER_PHONE_DAY: int = 10
 
+    # --- Đăng nhập nội bộ (Console) ---
+    # Phiên 8 giờ = một ca làm việc. Hết ca phải đăng nhập lại kèm 2FA.
+    STAFF_SESSION_HOURS: int = 8
+    STAFF_MAX_FAILED_ATTEMPTS: int = 5
+    STAFF_LOCKOUT_MINUTES: int = 15
+
     # --- Phân bổ doanh thu (SPEC 4.4) ---
     DRIVER_SHARE_RATE: Decimal = Decimal("0.58")  # tài xế nhận ~58% cước (chưa gồm phụ thu đón xa)
     TAKE_RATE: Decimal = Decimal("0.38")  # take-rate nền tảng Năm 1 = 38%

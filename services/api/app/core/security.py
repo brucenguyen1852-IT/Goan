@@ -75,13 +75,19 @@ def create_access_token(subject: str, role: str, *, family: str | None = None) -
 
 
 def create_refresh_token(
-    subject: str, role: str, *, jti: str | None = None, family: str | None = None
+    subject: str,
+    role: str,
+    *,
+    jti: str | None = None,
+    family: str | None = None,
+    expires_delta: timedelta | None = None,
 ) -> str:
+    """`expires_delta` để phiên nội bộ sống 8 giờ thay vì 30 ngày như app khách/tài xế."""
     return _create_token(
         subject,
         role,
         REFRESH_TOKEN,
-        timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        expires_delta or timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         jti=jti,
         family=family,
     )

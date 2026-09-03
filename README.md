@@ -87,6 +87,21 @@ ruff format --check app tests
 mypy app
 ```
 
+## Console nội bộ (IAM)
+
+Nhân sự nội bộ nằm ở bảng riêng `staff_users`, đăng nhập bằng **email + mật khẩu + TOTP**
+(bắt buộc 2FA, phiên 8 giờ, sai 5 lần là khoá). Phân quyền theo `domain:action:scope`; vai trò
+chỉ là tập hợp quyền lưu trong DB nên sửa quyền không cần deploy.
+
+```bash
+cd services/api
+python -m scripts.seed_iam                                  # nạp danh mục quyền + 12 vai trò
+python -m scripts.seed_iam admin@goan.vn "Nguyễn Văn A"     # + tạo super_admin đầu tiên
+```
+
+Lệnh trên in ra mật khẩu và URI TOTP **đúng một lần**. Quét URI vào Google Authenticator rồi
+gọi `POST /api/v1/ops/auth/login`. Không endpoint nào đọc lại được bí mật TOTP.
+
 ## Quan sát hệ thống
 
 `/metrics` phơi bày số liệu cho Prometheus (số request, độ trễ, request đang xử lý dở). Nhãn

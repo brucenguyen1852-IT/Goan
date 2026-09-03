@@ -21,6 +21,8 @@ from app.core.security import decode_token
 from app.database import SessionFactory
 from app.domains.audit import service as audit_service
 
+STAFF_ROLE = "staff"
+
 logger = logging.getLogger("goan.audit")
 
 AUDITED_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
@@ -61,13 +63,19 @@ class AuditMiddleware(BaseHTTPMiddleware):
         self, request: Request, response: Response, raw_body: bytes, duration_ms: int
     ) -> None:
         actor_id: uuid.UUID | None = None
+        actor_staff_id: uuid.UUID | None = None
         actor_role: str | None = None
         auth = request.headers.get("authorization", "")
         if auth.lower().startswith("bearer "):
             try:
                 payload = decode_token(auth[7:])
-                actor_id = uuid.UUID(payload["sub"])
                 actor_role = payload.get("role")
+                # Nhân sự nội bộ ở bảng staff_users; nhét id đó vào actor_id sẽ vi phạm khoá
+                # ngoại trỏ sang users và làm mất luôn dòng audit.
+                if actor_role == STAFF_ROLE:
+                    actor_staff_id = uuid.UUID(payload["sub"])
+                else:
+                    actor_id = uuid.UUID(payload["sub"])
             except Exception:
                 pass  # token hỏng/hết hạn: vẫn ghi log nhưng không gán người thực hiện
 
@@ -87,6 +95,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
                 path=request.url.path,
                 status_code=response.status_code,
                 actor_id=actor_id,
+                actor_staff_id=actor_staff_id,
                 actor_role=actor_role,
                 ip_address=request.client.host if request.client else None,
                 user_agent=request.headers.get("user-agent"),

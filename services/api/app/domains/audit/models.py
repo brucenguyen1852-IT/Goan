@@ -24,6 +24,7 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
     __table_args__ = (
         Index("ix_audit_logs_actor_created", "actor_id", "created_at"),
+        Index("ix_audit_logs_staff_created", "actor_staff_id", "created_at"),
         Index("ix_audit_logs_resource", "resource_type", "resource_id"),
         Index("ix_audit_logs_created", "created_at"),
     )
@@ -33,6 +34,10 @@ class AuditLog(Base):
     # Ai — NULL khi request chưa đăng nhập (vd gửi OTP).
     actor_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    # Nhân sự nội bộ nằm ở bảng khác (staff_users), không dùng chung khoá ngoại với users.
+    actor_staff_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("staff_users.id", ondelete="SET NULL"), nullable=True
     )
     actor_role: Mapped[str | None] = mapped_column(String(32), nullable=True)
 

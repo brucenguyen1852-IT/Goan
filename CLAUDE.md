@@ -83,6 +83,13 @@ Redis pub/sub (nhiều instance). Vị trí tài xế nằm ở Redis GEO nên m
 DB là SQLite (dev). Job nền ở `app/workers/tasks.py` (Celery beat: nhả ví, hết hạn matching,
 đối soát ngày, quét tín hiệu ngoài app, chi hoàn ký quỹ).
 
+**Hai thế giới tài khoản tách hẳn nhau.** Khách/tài xế ở `users` (đăng nhập OTP theo SĐT);
+nhân sự nội bộ ở `staff_users` (email + mật khẩu + TOTP). Token nội bộ mang `role="staff"` và
+`sub` trỏ vào `staff_users`, nên không token nào dùng lẫn được. Endpoint Console dùng
+`Depends(require_permission("domain:action:scope"))` — **đừng** kiểm tra tên vai trò trong code
+nghiệp vụ, vai trò chỉ là tập hợp quyền lưu ở DB và sửa được từ Console. Audit của nhân sự ghi
+vào `actor_staff_id` (khác khoá ngoại với `actor_id`).
+
 **Quan sát hệ thống**: `/metrics` (Prometheus) nằm ngoài OpenAPI và ngoài cùng chuỗi middleware.
 Nhãn `path` **phải** là template route — `core/metrics.route_label()` lo việc đó, đường dẫn lạ gom
 vào `unmatched`; đừng gắn nhãn bằng `request.url.path`. Sentry và OpenTelemetry bật theo biến môi

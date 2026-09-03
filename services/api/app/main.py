@@ -19,6 +19,7 @@ from app.database import engine
 from app.domains.auth.router import router as auth_router
 from app.domains.escrow.router import router as escrow_router
 from app.domains.fraud.router import router as fraud_router
+from app.domains.iam.router import router as iam_router
 from app.domains.matching.router import router as matching_router
 from app.domains.partners.router import router as partners_router
 from app.domains.payments.router import router as payments_router
@@ -80,6 +81,7 @@ for r in (
     payments_router,
     partners_router,
     fraud_router,
+    iam_router,
 ):
     api.include_router(r)
 

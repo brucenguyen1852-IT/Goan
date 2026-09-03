@@ -1,6 +1,7 @@
 """Dependencies dùng chung (SPEC 2)."""
 
 import uuid
+from collections.abc import Awaitable, Callable
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -12,6 +13,7 @@ from app.core.constants import UserRole, UserStatus
 from app.core.exceptions import PermissionDeniedError, UnauthorizedError
 from app.core.security import decode_token
 from app.database import get_db
+from app.domains.iam.models import StaffUser
 from app.domains.users.models import DriverProfile, User
 from app.redis_client import get_redis as _get_redis
 
@@ -66,3 +68,43 @@ async def get_driver_profile(
     if profile is None:
         raise PermissionDeniedError("Tài xế chưa có hồ sơ")
     return profile
+
+
+# --- Nhân sự nội bộ (Console) ---------------------------------------------------------
+# Token nội bộ mang role="staff" và `sub` là id trong bảng staff_users, không phải users.
+# Nhờ vậy token của khách/tài xế không bao giờ đi lọt vào endpoint /ops, và ngược lại.
+
+STAFF_ROLE = "staff"
+
+
+async def get_current_staff(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> StaffUser:
+    if credentials is None or not credentials.credentials:
+        raise UnauthorizedError("Thiếu access token")
+    payload = decode_token(credentials.credentials)
+    if payload.get("role") != STAFF_ROLE:
+        raise PermissionDeniedError("Token này không dùng được cho Console")
+    staff = await db.get(StaffUser, uuid.UUID(payload["sub"]))
+    if staff is None:
+        raise UnauthorizedError("Tài khoản nội bộ không tồn tại")
+    if not staff.is_active:
+        raise PermissionDeniedError("Tài khoản đã bị vô hiệu hoá")
+    return staff
+
+
+def require_permission(permission: str) -> Callable[..., Awaitable[StaffUser]]:
+    """Dùng làm dependency: `staff = Depends(require_permission("iam:staff:write"))`.
+
+    Thiếu quyền thì trả 403 kèm ĐÚNG mã quyền còn thiếu, để người vận hành biết phải xin gì
+    thay vì đoán.
+    """
+
+    async def _check(staff: StaffUser = Depends(get_current_staff)) -> StaffUser:
+        from app.domains.iam import service as iam_service
+
+        iam_service.assert_permission(staff, permission)
+        return staff
+
+    return _check

@@ -93,11 +93,16 @@
 | PRD-SEC-06 | Đăng xuất một thiết bị không đá thiết bị khác | Phân định §3.2 | `test_auth_tokens.py` QA-AUTH-05 | ✅ |
 | PRD-SEC-07 | 2FA bắt buộc cho nhân sự nội bộ | Phân định §2.3 | — | ❌ **P1** |
 | PRD-SEC-08 | Che PII mặc định, xem đầy đủ phải nhập lý do | Phân định §2.3 | — | ❌ **P1** |
-| PRD-SEC-09 | Phân quyền `domain:action:scope` | Phân định §3.2 | — | ❌ **P1** |
+| PRD-SEC-09 | Phân quyền `domain:action:scope` | Phân định §3.2 | `test_iam.py` QA-IAM-11/12 | ✅ |
 | PRD-SEC-10 | Hạn mức OTP theo **số điện thoại**, không chỉ theo IP | Phát hiện khi rà soát API | `test_auth_tokens.py` QA-AUTH-13, `test_rate_limit_and_request_id.py` QA-RL-02/05 | ✅ |
 | PRD-SEC-11 | **Đăng ký công khai không được tạo tài khoản quản trị** | Phát hiện khi rà soát API | `test_auth_tokens.py` QA-AUTH-10/11/12 | ✅ |
 | PRD-SEC-12 | Chuẩn hoá + kiểm tra số điện thoại ở biên vào | Phát hiện khi rà soát API | `test_phone.py` QA-PHONE-01…03 | ✅ |
 | PRD-SEC-13 | Dữ liệu đăng ký sai không được làm mất OTP đã gửi | Phát hiện khi rà soát API | `test_auth_tokens.py` QA-AUTH-14/15 | ✅ |
+| PRD-SEC-14 | Đăng nhập nội bộ **bắt buộc 2FA (TOTP)**, phiên 8 giờ | Phân định §2.3, §3.2 | `test_iam.py` QA-IAM-05…08 | ✅ |
+| PRD-SEC-15 | Khoá tài khoản nội bộ sau 5 lần sai; admin gỡ khoá được | Phân định §2.3 | `test_iam.py` QA-IAM-09/10 | ✅ |
+| PRD-SEC-16 | Không dùng chung tài khoản; rời công ty là **vô hiệu hoá, không xoá** | Phân định §2.3 | `test_iam.py` QA-IAM-15 | ✅ |
+| PRD-SEC-17 | Phân quyền `domain:action:scope`; thiếu quyền trả 403 kèm mã quyền còn thiếu | Phân định §3.2 | `test_iam.py` QA-IAM-11…14 | ✅ |
+| PRD-SEC-18 | Token app và token nội bộ không dùng lẫn được cho nhau | Phân định §3.2 | `test_iam.py` QA-IAM-13/14 | ✅ |
 
 ## F. Vận hành & Quan sát
 
@@ -111,6 +116,8 @@
 | PRD-OPS-06 | Sentry bật theo cấu hình, không gửi kèm PII | Phân định §3.3 | — | ⚠️ **Thiếu test** |
 | PRD-OPS-07 | Số liệu Prometheus ở `/metrics`, nhãn `path` là template route (không nổ cardinality), khoá được bằng token | Phân định §3.3 | `test_metrics.py` QA-MET-01…06 | ✅ |
 | PRD-OPS-08 | Trace OpenTelemetry bật theo cấu hình; thiếu gói thì cảnh báo, không làm sập app | Phân định §3.3 | `test_metrics.py` QA-MET-07…08 | ✅ |
+| PRD-OPS-09 | Đọc nhật ký thao tác có lọc theo người / đối tượng / thời gian, phân trang con trỏ | Phân định §2.3 | `test_iam.py` QA-IAM-17/18 | ✅ |
+| PRD-OPS-10 | Thao tác của nhân sự nội bộ ghi vào `actor_staff_id`, không lẫn với người dùng app | Phân định §2.3 | `test_iam.py` QA-IAM-16 | ✅ |
 
 ## G. Chat & Hỗ trợ *(toàn bộ thuộc P2, chưa bắt đầu)*
 

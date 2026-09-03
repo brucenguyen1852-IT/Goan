@@ -4,6 +4,7 @@ from app.database import Base
 from app.domains.audit.models import AuditLog
 from app.domains.escrow.models import EscrowTransaction
 from app.domains.fraud.models import DriverOnlineSession, FraudIncident, FraudReviewQueue
+from app.domains.iam.models import Permission, Role, RolePermission, StaffRole, StaffUser
 from app.domains.partners.models import (
     MarketingSubsidy,
     Partner,
@@ -23,6 +24,11 @@ from app.domains.users.models import DriverProfile, User
 __all__ = [
     "Base",
     "AuditLog",
+    "StaffUser",
+    "Role",
+    "Permission",
+    "RolePermission",
+    "StaffRole",
     "User",
     "DriverProfile",
     "Trip",
