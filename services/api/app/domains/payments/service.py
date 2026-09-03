@@ -10,10 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.constants import (
+    SETTLED_TRIP_STATUSES,
     EscrowTransactionType,
     PaymentMethod,
     PaymentStatus,
-    TripStatus,
     WalletTransactionType,
 )
 from app.core.exceptions import AppError, ConflictError
@@ -164,7 +164,7 @@ async def run_daily_reconciliation(
                 func.coalesce(func.sum(Trip.final_fare), 0),
                 func.coalesce(func.sum(Trip.driver_payout), 0),
             ).where(
-                Trip.status == TripStatus.COMPLETED,
+                Trip.status.in_(SETTLED_TRIP_STATUSES),
                 Trip.completed_at >= start,
                 Trip.completed_at < end,
             )
@@ -206,9 +206,26 @@ async def run_daily_reconciliation(
         ).scalar_one()
     )
 
-    fare_diff = vnd(total_fare - total_payments)
-    # Tiền vào ví = driver_payout - phần trích ký quỹ.
-    payout_diff = vnd(total_payout - total_wallet_credit - total_escrow_accrual)
+    # Phí huỷ chuyến muộn cũng là tiền chạy qua hệ thống: khách trả, tài xế nhận. Chuyến bị
+    # huỷ nên không có final_fare, nhưng bỏ khoản này ra ngoài thì đối soát sẽ luôn lệch
+    # đúng bằng tổng phí huỷ trong ngày.
+    total_cancellation_fee = vnd(
+        (
+            await db.execute(
+                select(func.coalesce(func.sum(Trip.cancellation_fee), 0)).where(
+                    Trip.cancellation_fee > 0,
+                    Trip.cancelled_at >= start,
+                    Trip.cancelled_at < end,
+                )
+            )
+        ).scalar_one()
+    )
+
+    fare_diff = vnd(total_fare + total_cancellation_fee - total_payments)
+    # Tiền vào ví = driver_payout - phần trích ký quỹ, cộng phí huỷ được trả thẳng cho tài xế.
+    payout_diff = vnd(
+        total_payout + total_cancellation_fee - total_wallet_credit - total_escrow_accrual
+    )
 
     report = (
         await db.execute(
@@ -222,6 +239,7 @@ async def run_daily_reconciliation(
     report.total_driver_payout = total_payout
     report.total_wallet_credit = total_wallet_credit
     report.total_escrow_accrual = total_escrow_accrual
+    report.total_cancellation_fee = total_cancellation_fee
     report.fare_payment_diff = fare_diff
     report.payout_wallet_diff = payout_diff
     report.balanced = fare_diff == 0 and payout_diff == 0
@@ -233,5 +251,6 @@ async def run_daily_reconciliation(
         "reconciliation_done",
         report_date=report_date.isoformat(),
         balanced=report.balanced,
+        cancellation_fee=str(total_cancellation_fee),
     )
     return report

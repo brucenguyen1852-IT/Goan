@@ -2,11 +2,11 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.geo import haversine_km
-from app.domains.trips.models import Trip, TripGpsLog
+from app.domains.trips.models import Trip, TripGpsLog, TripRating
 
 
 async def get_trip(db: AsyncSession, trip_id: uuid.UUID) -> Trip | None:
@@ -57,3 +57,27 @@ def total_gps_distance_km(points: list[TripGpsLog]) -> Decimal:
     for prev, cur in zip(points, points[1:], strict=False):  # lệch 1 phần tử là cố ý
         total += haversine_km(prev.lat, prev.lng, cur.lat, cur.lng)
     return total.quantize(Decimal("0.01"))
+
+
+async def get_rating(db: AsyncSession, trip_id: uuid.UUID) -> TripRating | None:
+    stmt = select(TripRating).where(TripRating.trip_id == trip_id)
+    return (await db.execute(stmt)).scalar_one_or_none()
+
+
+async def driver_rating_stats(db: AsyncSession, driver_id: uuid.UUID) -> tuple[Decimal, int]:
+    """Trung bình và số lượt đánh giá của một tài xế, tính lại từ đầu.
+
+    Cộng dồn tăng dần thì mọi lần sửa hoặc xoá đánh giá về sau đều làm lệch vĩnh viễn và
+    không đối chiếu lại được. Số lượt đánh giá mỗi tài xế không lớn nên tính lại là đủ rẻ.
+    """
+    row = (
+        await db.execute(
+            select(func.avg(TripRating.stars), func.count(TripRating.id)).where(
+                TripRating.driver_id == driver_id
+            )
+        )
+    ).one()
+    average, total = row[0], int(row[1] or 0)
+    if not total:
+        return Decimal("0.00"), 0
+    return Decimal(str(average)).quantize(Decimal("0.01")), total

@@ -21,6 +21,7 @@ from app.domains.matching.router import router as matching_router
 from app.domains.partners.router import router as partners_router
 from app.domains.payments.router import router as payments_router
 from app.domains.pricing.router import router as pricing_router
+from app.domains.trips.router import ops_router as trips_ops_router
 from app.domains.trips.router import router as trips_router
 from app.domains.users.router import router as users_router
 from app.redis_client import close_redis, get_redis
@@ -65,6 +66,7 @@ for r in (
     users_router,
     pricing_router,
     trips_router,
+    trips_ops_router,
     matching_router,
     escrow_router,
     payments_router,

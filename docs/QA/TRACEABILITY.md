@@ -6,7 +6,7 @@
 > PRD ở đây gồm 3 tài liệu trong `docs/`: kiến trúc kỹ thuật, thiết kế luồng thanh toán,
 > và phân định hệ thống.
 >
-> Cập nhật: 03/09/2026 · **154 test tự động, độ phủ 81,8%** · 62/62 lời gọi API rà soát đạt
+> Cập nhật: 03/09/2026 · **183 test tự động, độ phủ 82,3%** · 76/76 lời gọi API rà soát đạt
 
 ## Quy ước mã
 
@@ -33,7 +33,7 @@
 | PRD-PAY-10 | State machine thanh toán đầy đủ (pre-auth → capture → settle → payout) | Thanh toán §3 | — | ❌ **P5** |
 | PRD-PAY-11 | Retry capture 3 lần rồi chuyển `DEBT_PENDING` | Thanh toán §4 bước 3 | — | ❌ **P5** |
 | PRD-PAY-12 | Nhánh tiền mặt + ghi nợ hoa hồng tài xế | Thanh toán §2.2 | — | ⛔ **Chờ quyết định** |
-| PRD-PAY-13 | Phí huỷ trả cho tài xế bằng bút toán ví | Thanh toán §6 | — | ❌ **P5** |
+| PRD-PAY-13 | Phí huỷ trả cho tài xế bằng bút toán ví | Thanh toán §6 | `test_trip_lifecycle.py` QA-LIFE-14/24 | ✅ |
 | PRD-PAY-14 | Webhook cổng thanh toán verify chữ ký, xử lý idempotent | Thanh toán §7 | — | ❌ **P5** |
 
 ## B. Ký quỹ
@@ -61,6 +61,13 @@
 | PRD-MATCH-02 | Hai tài xế cùng nhận: ai trước thắng (khoá phân tán) | Kiến trúc §3.3 | `test_matching.py` QA-MATCH-06…07 | ✅ |
 | PRD-MATCH-03 | Quá 90 giây không ai nhận → `no_driver_found` | Kiến trúc §3.3 | `test_matching.py` QA-MATCH-08…09 | ✅ |
 | PRD-MATCH-04 | Chỉ ghép tài xế đang rảnh, chưa quá ngưỡng cảnh cáo, tài khoản còn hoạt động | Kiến trúc §3.2 | `test_matching.py` QA-MATCH-05 | ✅ |
+| PRD-TRIP-07 | **`trip_events` — dấu vết đầy đủ vòng đời chuyến** | Kiến trúc §4 (bảng trip_events) | `test_trip_lifecycle.py` QA-LIFE-01…03, 22 | ✅ |
+| PRD-TRIP-08 | Mốc **tài xế đã tới điểm đón**, tách khỏi lúc nhận chuyến | Kiến trúc §3.3 | `test_trip_lifecycle.py` QA-LIFE-04…07 | ✅ |
+| PRD-TRIP-09 | **Đánh giá sau chuyến → trạng thái `rated`** | Kiến trúc §3.3 (state machine) | `test_trip_lifecycle.py` QA-LIFE-08…13 | ✅ |
+| PRD-TRIP-10 | **Phí huỷ muộn được trả THẬT cho tài xế** | Thanh toán §6 | `test_trip_lifecycle.py` QA-LIFE-14/15/24 | ✅ |
+| PRD-TRIP-11 | Tìm lại tài xế trên cùng chuyến sau `no_driver_found` | Kiến trúc §3.3 | `test_trip_lifecycle.py` QA-LIFE-16/17 | ✅ |
+| PRD-TRIP-12 | **Điều phối viên gán tài xế thủ công / huỷ hộ**, bắt buộc ghi lý do | Phân định §2.3 (Live Ops) | `test_trip_lifecycle.py` QA-LIFE-18…21 | ✅ |
+| PRD-TRIP-13 | Chuyến đã đánh giá vẫn nằm trong đối soát và thống kê chống gian lận | Phát hiện khi rà soát API | `test_trip_lifecycle.py` QA-LIFE-25…27 | ✅ |
 
 ## D. Chống gian lận
 
@@ -120,14 +127,14 @@
 
 | Vùng | Tổng | Đã có test | Thiếu test | Chưa làm |
 |---|---:|---:|---:|---:|
-| Thanh toán | 14 | 8 | 0 | 6 |
+| Thanh toán | 14 | 9 | 0 | 5 |
 | Ký quỹ | 6 | 5 | 0 | 1 |
-| Chuyến & Ghép | 10 | 10 | 0 | 0 |
+| Chuyến & Ghép | 17 | 17 | 0 | 0 |
 | Chống gian lận | 7 | 6 | 0 | 1 |
 | Bảo mật | 13 | 10 | 0 | 3 |
 | Vận hành | 6 | 3 | 2 | 1 |
 | Chat | 6 | 0 | 0 | 6 |
-| **Tổng** | **62** | **42 (68%)** | **2** | **18** |
+| **Tổng** | **69** | **50 (72%)** | **2** | **17** |
 
 **Hai yêu cầu còn thiếu test** — code đã có nhưng chưa chứng minh được:
 

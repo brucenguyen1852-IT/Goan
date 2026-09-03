@@ -13,8 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.constants import (
+    SETTLED_TRIP_STATUSES,
     OnlineStatus,
     PartnerType,
+    TripActorType,
+    TripEventType,
     TripStatus,
     UserRole,
 )
@@ -31,8 +34,9 @@ from app.domains.partners.invoice import get_invoice_service
 from app.domains.payments import service as payments_service
 from app.domains.pricing import service as pricing_service
 from app.domains.pricing.schemas import FareBreakdown
+from app.domains.trips import events as trip_events
 from app.domains.trips import repository as trips_repo
-from app.domains.trips.models import Trip
+from app.domains.trips.models import Trip, TripRating
 from app.domains.trips.schemas import TripCreate
 from app.domains.trips.state_machine import assert_transition
 from app.domains.users.models import DriverProfile, User
@@ -59,12 +63,37 @@ class CompleteResult:
     route_deviation_detected: bool
 
 
-async def _set_status(db: AsyncSession, trip: Trip, target: TripStatus) -> Trip:
-    assert_transition(trip.status, target)
+async def _set_status(
+    db: AsyncSession,
+    trip: Trip,
+    target: TripStatus,
+    *,
+    event: TripEventType,
+    actor_type: TripActorType = TripActorType.SYSTEM,
+    actor_id: uuid.UUID | None = None,
+    **payload: object,
+) -> Trip:
+    """Đổi trạng thái và ghi dấu vết trong cùng một transaction.
+
+    Gộp hai việc vào một hàm là có chủ ý: nếu tách ra thì sớm muộn cũng có chỗ đổi trạng
+    thái mà quên ghi dấu vết, và dòng thời gian của chuyến sẽ khuyết đúng chỗ cần nhất.
+    """
+    previous = trip.status
+    assert_transition(previous, target)
     trip.status = target
     field = _TIMESTAMP_FIELD.get(target)
     if field and getattr(trip, field) is None:
         setattr(trip, field, datetime.now(timezone.utc))
+    await trip_events.record(
+        db,
+        trip.id,
+        event,
+        from_status=previous,
+        to_status=target,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        **payload,
+    )
     await db.flush()
     return trip
 
@@ -134,6 +163,18 @@ async def create_trip(
         idempotency_key=payload.idempotency_key,
     )
     db.add(trip)
+    await db.flush()
+    await trip_events.record(
+        db,
+        trip.id,
+        TripEventType.CREATED,
+        to_status=TripStatus.REQUESTED,
+        actor_type=TripActorType.RIDER,
+        actor_id=rider.id,
+        estimated_fare=str(breakdown.final_fare),
+        pickup_address=pickup_address,
+        dropoff_address=payload.dropoff_address,
+    )
     await db.commit()
     await db.refresh(trip)
     log_event(
@@ -180,10 +221,24 @@ async def verify_qr(db: AsyncSession, trip: Trip, rider: User, qr_token: str) ->
     profile = await _get_driver_profile(db, trip.driver_id)
     await fraud_service.check_qr_verified(db, trip, profile, qr_token)
 
-    await _set_status(db, trip, TripStatus.QR_VERIFIED)
+    await _set_status(
+        db,
+        trip,
+        TripStatus.QR_VERIFIED,
+        event=TripEventType.QR_VERIFIED,
+        actor_type=TripActorType.RIDER,
+        actor_id=rider.id,
+    )
     trip.qr_verified_at = datetime.now(timezone.utc)
     # qr_verified -> in_progress là tự động ngay sau khi quét thành công (SPEC 5.1).
-    await _set_status(db, trip, TripStatus.IN_PROGRESS)
+    await _set_status(
+        db,
+        trip,
+        TripStatus.IN_PROGRESS,
+        event=TripEventType.QR_VERIFIED,
+        actor_type=TripActorType.RIDER,
+        actor_id=rider.id,
+    )
     profile.online_status = OnlineStatus.ON_TRIP
     await db.commit()
     await _notify_status(trip)
@@ -223,7 +278,9 @@ async def complete_trip(
         raise PermissionDeniedError("Chuyến không thuộc về tài xế này")
 
     # Idempotent: mobile network chập chờn dễ gửi trùng request (SPEC 13).
-    if trip.status is TripStatus.COMPLETED:
+    # Tính cả `rated`: khách có thể đánh giá rất nhanh, và request complete gửi lại do mất
+    # sóng vẫn phải trả về kết quả cũ thay vì báo lỗi.
+    if trip.status in SETTLED_TRIP_STATUSES:
         return CompleteResult(
             trip=trip,
             fare=await _rebuild_final_fare(db, trip),
@@ -313,7 +370,19 @@ async def complete_trip(
 
     profile.total_trips += 1
     profile.online_status = OnlineStatus.ONLINE
-    await _set_status(db, trip, TripStatus.COMPLETED)
+    await _set_status(
+        db,
+        trip,
+        TripStatus.COMPLETED,
+        event=TripEventType.COMPLETED,
+        actor_type=TripActorType.DRIVER,
+        actor_id=driver.id,
+        final_fare=str(fare.final_fare),
+        driver_payout=str(actual_payout),
+        escrow_deducted=str(escrow_deducted),
+        distance_km=str(actual_distance_km),
+        route_deviation=deviation.is_deviation,
+    )
     await db.commit()
 
     # Hoá đơn VAT cho chuyến từ khách sạn đối tác (SPEC 10.2).
@@ -362,36 +431,194 @@ async def _rebuild_final_fare(db: AsyncSession, trip: Trip) -> FareBreakdown:
 # --- Huỷ chuyến -----------------------------------------------------------
 
 
-async def cancel_trip(db: AsyncSession, trip: Trip, user: User, reason: str | None) -> Trip:
-    if user.id == trip.rider_id:
+async def cancel_trip(
+    db: AsyncSession,
+    trip: Trip,
+    user: User,
+    reason: str | None,
+    *,
+    on_behalf_of_ops: bool = False,
+) -> Trip:
+    """Huỷ chuyến. Khách huỷ muộn thì chịu phí huỷ, và phí đó ĐƯỢC TRẢ CHO TÀI XẾ.
+
+    `on_behalf_of_ops`: CSKH huỷ hộ khi khách gọi tổng đài hoặc tài xế mất liên lạc. Bắt
+    buộc có lý do và ghi rõ người thao tác vào dòng thời gian của chuyến.
+    """
+    if on_behalf_of_ops:
+        if not reason:
+            raise AppError("Huỷ hộ bắt buộc phải ghi lý do")
         target = TripStatus.CANCELLED_BY_RIDER
+        actor_type = TripActorType.ADMIN
+    elif user.id == trip.rider_id:
+        target = TripStatus.CANCELLED_BY_RIDER
+        actor_type = TripActorType.RIDER
     elif trip.driver_id is not None and user.id == trip.driver_id:
         if not reason:
             raise AppError("Tài xế huỷ chuyến bắt buộc phải có lý do")
         target = TripStatus.CANCELLED_BY_DRIVER
+        actor_type = TripActorType.DRIVER
     else:
         raise PermissionDeniedError("Không có quyền huỷ chuyến này")
 
-    # Rider huỷ muộn (quá X phút sau khi matched) thì chịu phí huỷ.
-    if (
+    # Khách huỷ muộn (quá X phút sau khi ghép) thì chịu phí huỷ. CSKH huỷ hộ thì miễn phí —
+    # nếu tính phí thì mọi cuộc gọi tổng đài đều thành một khoản tranh chấp.
+    charge_fee = (
         target is TripStatus.CANCELLED_BY_RIDER
+        and not on_behalf_of_ops
         and trip.matched_at is not None
         and datetime.now(timezone.utc) - ensure_utc(trip.matched_at)
         > timedelta(minutes=settings.CANCELLATION_GRACE_MINUTES)
-    ):
+    )
+    if charge_fee:
         trip.cancellation_fee = vnd(settings.CANCELLATION_FEE)
 
-    await _set_status(db, trip, target)
+    await _set_status(
+        db,
+        trip,
+        target,
+        event=TripEventType.CANCELLED,
+        actor_type=actor_type,
+        actor_id=user.id,
+        reason=reason or "",
+        cancellation_fee=str(trip.cancellation_fee),
+        on_behalf_of_ops=on_behalf_of_ops,
+    )
     trip.cancellation_reason = reason
 
     if trip.driver_id is not None:
         profile = await _get_driver_profile(db, trip.driver_id)
         if profile.online_status is OnlineStatus.ON_TRIP:
             profile.online_status = OnlineStatus.ONLINE
+
+        # Phí huỷ phải THỰC SỰ tới tay tài xế. Trước đây con số chỉ được ghi vào bảng trips
+        # và không có bút toán nào — tài xế chạy tới điểm đón rồi bị huỷ là mất công trắng.
+        if charge_fee and trip.cancellation_fee > 0:
+            await payments_service.charge_trip(
+                db, trip, amount=trip.cancellation_fee, idempotency_key=f"cancel-{trip.id}"
+            )
+            await payments_service.credit_driver_wallet(
+                db, trip.driver_id, trip.cancellation_fee, trip_id=trip.id
+            )
+
     await db.commit()
     await _notify_status(trip)
-    log_event(logger, "trip_cancelled", trip_id=str(trip.id), by=target.value, reason=reason or "")
+    log_event(
+        logger,
+        "trip_cancelled",
+        trip_id=str(trip.id),
+        by=target.value,
+        reason=reason or "",
+        cancellation_fee=str(trip.cancellation_fee),
+    )
     return trip
+
+
+# --- Tài xế báo đã tới điểm đón ------------------------------------------
+
+
+async def mark_driver_arrived(
+    db: AsyncSession, trip: Trip, driver: User, lat: float | None, lng: float | None
+) -> Trip:
+    """Mốc "tài xế đã tới điểm đón".
+
+    Trước đây không có mốc này: `driver_arriving` được đặt ngay lúc tài xế bấm nhận chuyến,
+    nên app khách hiện "tài xế đã đến" khi tài xế còn cách vài km. Đây là trạng thái phụ
+    (một mốc thời gian), không phải trạng thái mới trong state machine — chuyến vẫn ở
+    `driver_arriving` cho tới khi khách quét QR.
+    """
+    if trip.driver_id != driver.id:
+        raise PermissionDeniedError("Chuyến không thuộc về tài xế này")
+    if trip.status is not TripStatus.DRIVER_ARRIVING:
+        raise ConflictError("Chỉ báo đã tới khi đang trên đường đón khách")
+    if trip.driver_arrived_at is not None:
+        return trip  # idempotent: bấm hai lần không đổi gì
+
+    distance_m: float | None = None
+    if lat is not None and lng is not None:
+        distance_m = haversine_m(lat, lng, trip.pickup_lat, trip.pickup_lng)
+
+    trip.driver_arrived_at = datetime.now(timezone.utc)
+    await trip_events.record(
+        db,
+        trip.id,
+        TripEventType.DRIVER_ARRIVED,
+        from_status=trip.status,
+        to_status=trip.status,
+        actor_type=TripActorType.DRIVER,
+        actor_id=driver.id,
+        distance_to_pickup_m=int(distance_m) if distance_m is not None else None,
+    )
+    await db.commit()
+    await notifications.notify_user(
+        trip.rider_id,
+        ServerEvent.TRIP_STATUS_CHANGED,
+        trip_id=str(trip.id),
+        status=trip.status.value,
+        driver_arrived=True,
+    )
+    log_event(
+        logger,
+        "trip_driver_arrived",
+        trip_id=str(trip.id),
+        distance_to_pickup_m=str(int(distance_m)) if distance_m is not None else "",
+    )
+    return trip
+
+
+# --- Đánh giá sau chuyến --------------------------------------------------
+
+
+async def rate_trip(
+    db: AsyncSession, trip: Trip, rider: User, stars: int, comment: str | None
+) -> tuple[TripRating, DriverProfile]:
+    """Khách đánh giá tài xế — bước cuối của vòng đời chuyến (deck mục 3.3: `rated`)."""
+    if trip.rider_id != rider.id:
+        raise PermissionDeniedError("Chỉ khách của chuyến mới được đánh giá")
+    if trip.status is not TripStatus.COMPLETED:
+        raise ConflictError("Chỉ đánh giá được chuyến đã hoàn thành")
+    if trip.driver_id is None:
+        raise ConflictError("Chuyến không có tài xế để đánh giá")
+
+    existing = await trips_repo.get_rating(db, trip.id)
+    if existing is not None:
+        raise ConflictError("Chuyến này đã được đánh giá rồi")
+
+    rating = TripRating(
+        trip_id=trip.id,
+        rider_id=rider.id,
+        driver_id=trip.driver_id,
+        stars=stars,
+        comment=comment,
+    )
+    db.add(rating)
+    await db.flush()
+
+    profile = await _get_driver_profile(db, trip.driver_id)
+    # Tính lại trung bình từ toàn bộ đánh giá thay vì cộng dồn tăng dần: cộng dồn thì mọi
+    # lần sửa/xoá đánh giá về sau đều làm lệch vĩnh viễn, và không đối chiếu lại được.
+    avg, total = await trips_repo.driver_rating_stats(db, trip.driver_id)
+    profile.rating_avg = avg
+
+    trip.rated_at = datetime.now(timezone.utc)
+    await _set_status(
+        db,
+        trip,
+        TripStatus.RATED,
+        event=TripEventType.RATED,
+        actor_type=TripActorType.RIDER,
+        actor_id=rider.id,
+        stars=stars,
+    )
+    await db.commit()
+    log_event(
+        logger,
+        "trip_rated",
+        trip_id=str(trip.id),
+        stars=str(stars),
+        driver_rating_avg=str(avg),
+        driver_total_ratings=str(total),
+    )
+    return rating, profile
 
 
 async def _get_driver_profile(db: AsyncSession, driver_user_id: uuid.UUID) -> DriverProfile:

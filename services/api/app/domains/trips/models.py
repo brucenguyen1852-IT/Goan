@@ -1,10 +1,11 @@
 """Model trips + trip_gps_logs (SPEC 3.3, 3.4)."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     Enum,
@@ -19,7 +20,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.constants import TimeBand, TripStatus
+from app.core.constants import TimeBand, TripActorType, TripEventType, TripStatus
 from app.core.model_base import Money, TimestampMixin, uuid_pk
 from app.database import Base
 
@@ -78,6 +79,12 @@ class Trip(Base, TimestampMixin):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cancellation_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Tài xế bấm "đã tới điểm đón". Trước đây không có mốc này nên app khách hiển thị
+    # "tài xế đã đến" ngay khi tài xế mới nhận chuyến và còn cách 3km.
+    driver_arrived_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    rated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     restaurant_partner_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("partners.id"), nullable=True
@@ -99,3 +106,63 @@ class TripGpsLog(Base):
     lat: Mapped[float] = mapped_column(Float, nullable=False)
     lng: Mapped[float] = mapped_column(Float, nullable=False)
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class TripEvent(Base):
+    """Dấu vết vòng đời của MỘT chuyến (SPEC 4).
+
+    Vì sao tách khỏi `audit_logs`: audit_logs ghi theo request HTTP nên bỏ sót mọi thứ hệ
+    thống tự làm — chuyến hết hạn matching do Celery beat, tài xế bị cờ gian lận, trạng thái
+    đổi trong một transaction dài. Khi khách khiếu nại "sao chuyến của tôi bị huỷ", CSKH cần
+    một dòng thời gian đầy đủ của chuyến đó, không phải log của các lời gọi API.
+
+    Chỉ ghi thêm, không sửa, không xoá.
+    """
+
+    __tablename__ = "trip_events"
+    __table_args__ = (Index("ix_trip_events_trip_created", "trip_id", "created_at"),)
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    trip_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("trips.id", ondelete="CASCADE"), nullable=False
+    )
+    event_type: Mapped[TripEventType] = mapped_column(
+        Enum(TripEventType, name="trip_event_type"), nullable=False
+    )
+    from_status: Mapped[TripStatus | None] = mapped_column(
+        Enum(TripStatus, name="trip_status"), nullable=True
+    )
+    to_status: Mapped[TripStatus | None] = mapped_column(
+        Enum(TripStatus, name="trip_status"), nullable=True
+    )
+    actor_type: Mapped[TripActorType] = mapped_column(
+        Enum(TripActorType, name="trip_actor_type"), default=TripActorType.SYSTEM, nullable=False
+    )
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class TripRating(Base):
+    """Khách đánh giá tài xế sau chuyến (SPEC 3.3 — trạng thái cuối `rated`).
+
+    Một chuyến chỉ đánh giá được một lần: ràng buộc UNIQUE trên trip_id, không dựa vào tầng
+    ứng dụng kiểm tra — hai request song song sẽ cùng vượt qua kiểm tra ở tầng ứng dụng.
+    """
+
+    __tablename__ = "trip_ratings"
+    __table_args__ = (Index("ix_trip_ratings_driver", "driver_id"),)
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    trip_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("trips.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    rider_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
+    driver_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
+    stars: Mapped[int] = mapped_column(Integer, nullable=False)
+    comment: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )

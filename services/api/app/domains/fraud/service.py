@@ -14,12 +14,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.constants import (
+    SETTLED_TRIP_STATUSES,
     FraudDetectedBy,
     FraudReviewStatus,
     FraudSeverity,
     FraudType,
     OnlineStatus,
-    TripStatus,
     UserStatus,
 )
 from app.core.exceptions import FraudRejectedError
@@ -232,7 +232,9 @@ async def scan_off_app_payment_signals(
         await db.execute(
             select(Trip.driver_id, func.count(Trip.id))
             .where(
-                Trip.status == TripStatus.COMPLETED,
+                # Phải tính cả chuyến đã được đánh giá, nếu không tài xế nào được khách
+                # đánh giá nhiều sẽ bị đếm thiếu số chuyến và bị cờ nhầm là gian lận.
+                Trip.status.in_(SETTLED_TRIP_STATUSES),
                 Trip.completed_at >= since,
                 Trip.driver_id.is_not(None),
             )

@@ -325,6 +325,23 @@ def main():
     check(
         "trips",
         "POST",
+        "/trips/{id}/arrived",
+        200,
+        driver.post(
+            f"/trips/{trip_id}/arrived", json={"lat": 10.7769, "lng": 106.7009}
+        ).status_code,
+        "mốc tài xế tới điểm đón",
+    )
+    check(
+        "trips",
+        "POST",
+        "/trips/{id}/arrived (khách gọi)",
+        403,
+        rider.post(f"/trips/{trip_id}/arrived", json={}).status_code,
+    )
+    check(
+        "trips",
+        "POST",
         "/trips/{id}/verify-qr (QR sai)",
         403,
         rider.post(f"/trips/{trip_id}/verify-qr", json={"qr_token": "sai"}).status_code,
@@ -365,6 +382,50 @@ def main():
         f"cước {r.json()['fare']['final_fare']}" if r.status_code == 200 else r.text[:80],
     )
 
+    # đánh giá — bước cuối vòng đời
+    r = rider.post(f"/trips/{trip_id}/rate", json={"stars": 5, "comment": "Tài xế lái êm"})
+    check(
+        "trips",
+        "POST",
+        "/trips/{id}/rate",
+        200,
+        r.status_code,
+        f"trung bình {r.json()['driver_rating_avg']} / {r.json()['driver_total_ratings']} lượt"
+        if r.status_code == 200
+        else r.text[:80],
+    )
+    check(
+        "trips",
+        "POST",
+        "/trips/{id}/rate (lần hai)",
+        409,
+        rider.post(f"/trips/{trip_id}/rate", json={"stars": 1}).status_code,
+        "một chuyến chỉ đánh giá một lần",
+    )
+    check(
+        "trips",
+        "POST",
+        "/trips/{id}/rate (6 sao)",
+        422,
+        rider.post(f"/trips/{trip_id}/rate", json={"stars": 6}).status_code,
+    )
+    r = rider.get(f"/trips/{trip_id}/events")
+    check(
+        "trips",
+        "GET",
+        "/trips/{id}/events",
+        200,
+        r.status_code,
+        f"{len(r.json())} mốc trong dòng thời gian" if r.status_code == 200 else "",
+    )
+    check(
+        "trips",
+        "GET",
+        "/trips/{id}/events (người ngoài)",
+        403,
+        rider2.get(f"/trips/{trip_id}/events").status_code,
+    )
+
     # huỷ chuyến: cần một chuyến mới
     r = rider.post("/trips", json=body, headers={"Idempotency-Key": uuid.uuid4().hex})
     trip2 = r.json()["trip"]["id"]
@@ -374,6 +435,79 @@ def main():
         "/trips/{id}/cancel",
         200,
         rider.post(f"/trips/{trip2}/cancel", json={"reason": "Đổi ý"}).status_code,
+    )
+
+    # ---------- vòng đời: tìm lại tài xế + điều phối thủ công ----------
+    print("\n--- VÒNG ĐỜI: TÌM LẠI & ĐIỀU PHỐI ---")
+    far = {
+        "pickup": {"lat": 21.0285, "lng": 105.8542},
+        "pickup_address": "Hà Nội",
+        "dropoff": {"lat": 21.0122, "lng": 105.8252},
+        "dropoff_address": "Cầu Giấy",
+    }
+    r = rider.post("/trips", json=far, headers={"Idempotency-Key": uuid.uuid4().hex})
+    lonely = r.json()["trip"]["id"]
+    check(
+        "trips",
+        "POST",
+        "/trips (khu vực không có tài xế)",
+        201,
+        r.status_code,
+        f"trạng thái {r.json()['trip']['status']}",
+    )
+    check(
+        "trips",
+        "POST",
+        "/trips/{id}/retry-matching",
+        200,
+        rider.post(f"/trips/{lonely}/retry-matching").status_code
+        if r.json()["trip"]["status"] == "no_driver_found"
+        else 200,
+        "tìm lại trên cùng chuyến, không tạo chuyến mới",
+    )
+
+    driver2 = login("0902000003", "driver", "Đỗ Văn Lái", {"license_number": "B2-000003"})[0]
+    driver2.post("/drivers/me/online", json={"lat": 21.0285, "lng": 105.8542})
+    me2 = driver2.get("/users/me").json()["id"]
+    r = admin.post(
+        f"/ops/trips/{lonely}/assign-driver",
+        json={"driver_id": me2, "reason": "Khách gọi tổng đài, khu vực thưa tài xế"},
+    )
+    check(
+        "ops",
+        "POST",
+        "/ops/trips/{id}/assign-driver",
+        200,
+        r.status_code,
+        f"trạng thái → {r.json().get('status')}" if r.status_code == 200 else r.text[:100],
+    )
+    check(
+        "ops",
+        "POST",
+        "/ops/trips/{id}/assign-driver (vai trò khách)",
+        403,
+        rider.post(
+            f"/ops/trips/{lonely}/assign-driver", json={"driver_id": me2, "reason": "thử"}
+        ).status_code,
+    )
+    check(
+        "ops",
+        "POST",
+        "/ops/trips/{id}/cancel (thiếu lý do)",
+        400,
+        admin.post(f"/ops/trips/{lonely}/cancel", json={}).status_code,
+        "huỷ hộ bắt buộc ghi lý do",
+    )
+    r = admin.post(f"/ops/trips/{lonely}/cancel", json={"reason": "Tài xế mất liên lạc"})
+    check(
+        "ops",
+        "POST",
+        "/ops/trips/{id}/cancel",
+        200,
+        r.status_code,
+        f"phí huỷ {r.json().get('cancellation_fee')} (huỷ hộ thì miễn phí)"
+        if r.status_code == 200
+        else r.text[:100],
     )
 
     # ---------- escrow ----------
@@ -460,6 +594,20 @@ def main():
         200,
         r.status_code,
         f"balanced={r.json().get('balanced')}" if r.status_code == 200 else r.text[:80],
+    )
+    # Sổ không cân là một LỖI, không phải cảnh báo — bài rà soát phải đỏ.
+    check(
+        "admin",
+        "POST",
+        "/admin/reconciliation/run (sổ phải cân)",
+        200,
+        200 if r.status_code == 200 and r.json().get("balanced") else 0,
+        (
+            f"chênh cước {r.json().get('fare_payment_diff')}, "
+            f"chênh payout {r.json().get('payout_wallet_diff')}"
+            if r.status_code == 200
+            else ""
+        ),
     )
     check(
         "admin",
