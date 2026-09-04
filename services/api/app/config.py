@@ -72,6 +72,27 @@ class Settings(BaseSettings):
     # Trần số hội thoại một agent ôm cùng lúc. Vượt trần thì phân cho người khác.
     AGENT_DEFAULT_MAX_CHATS: int = 5
 
+    # --- Tệp đính kèm trong chat (P2-12) ---
+    # 5MB: đủ cho một ảnh chụp hiện trường bằng điện thoại, chặn trước khi ai đó gửi video.
+    ATTACHMENT_MAX_BYTES: int = 5 * 1024 * 1024
+    # URL đọc ảnh chỉ sống 15 phút. Link rò ra thì cũng chỉ rò trong 15 phút.
+    ATTACHMENT_URL_TTL_SECONDS: int = 900
+    ATTACHMENT_ALLOWED_TYPES: list[str] = ["image/jpeg", "image/png", "image/webp"]
+
+    # --- Push (P2-13) ---
+    # Chờ vài giây rồi mới push: người đang mở app đã thấy tin qua WebSocket từ lâu, và bắn
+    # thêm thông báo cho tin họ vừa đọc là cách làm người ta tắt thông báo của ứng dụng.
+    PUSH_ON_MESSAGE_DELAY_SECONDS: int = 5
+    # Tắt trong test: ở đó không có broker, và bài test về push gọi thẳng hàm xử lý.
+    PUSH_ON_MESSAGE_ENABLED: bool = True
+
+    # --- Hạn lưu trữ hội thoại (phân định §7.6) — P2-20 ---
+    # Chat chuyến giữ 12 tháng; chat hỗ trợ giữ 24 tháng vì nó là BẰNG CHỨNG khiếu nại và
+    # khiếu nại đến muộn. Quá hạn thì ẩn danh hoá, không xoá dòng: xoá là mất cả số liệu
+    # thống kê lẫn khả năng chứng minh cuộc trò chuyện đó từng tồn tại.
+    CHAT_RETENTION_MONTHS_TRIP: int = 12
+    CHAT_RETENTION_MONTHS_SUPPORT: int = 24
+
     # --- Phân bổ doanh thu (SPEC 4.4) ---
     DRIVER_SHARE_RATE: Decimal = Decimal("0.58")  # tài xế nhận ~58% cước (chưa gồm phụ thu đón xa)
     TAKE_RATE: Decimal = Decimal("0.38")  # take-rate nền tảng Năm 1 = 38%

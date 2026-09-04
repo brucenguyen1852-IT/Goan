@@ -19,6 +19,7 @@ from app.domains.iam.models import (
     StaffUser,
     TrustedDevice,
 )
+from app.domains.notifications.models import PushToken
 from app.domains.partners.models import (
     MarketingSubsidy,
     Partner,
@@ -79,4 +80,5 @@ __all__ = [
     "TicketEvent",
     "CannedResponse",
     "AgentPresence",
+    "PushToken",
 ]

@@ -6,7 +6,7 @@
 > PRD ở đây gồm 3 tài liệu trong `docs/`: kiến trúc kỹ thuật, thiết kế luồng thanh toán,
 > và phân định hệ thống.
 >
-> Cập nhật: 04/09/2026 · **346 test tự động, độ phủ 84%** · 90/90 lời gọi API rà soát đạt
+> Cập nhật: 04/09/2026 · **374 test tự động, độ phủ 84%** · 98/98 lời gọi API rà soát đạt
 
 ## Quy ước mã
 
@@ -141,6 +141,13 @@
 | PRD-CHAT-08 | "Đang gõ" đi qua WS, không lưu DB, và chỉ tới thành viên hội thoại | Phân định §7.2 | `test_chat_ws.py` QA-CHAT-08, QA-CHAT-09 | ✅ |
 | PRD-CHAT-09 | Token hết hạn giữa lúc đang kết nối: báo `auth.expired` rồi đóng | Phân định §5 | `test_chat_ws.py` QA-CHAT-10 | ✅ |
 | PRD-CHAT-10 | Hội thoại không tồn tại và hội thoại của người khác trả **cùng một** lỗi | Phân định §7.6 | `test_chat.py` QA-CHAT-11 | ✅ |
+| PRD-CHAT-11 | Ảnh chỉ đọc được qua URL ký hạn 15 phút, không có URL cố định | Phân định §7.4 | `test_chat_media.py` QA-MEDIA-01, QA-MEDIA-05 | ✅ |
+| PRD-CHAT-12 | Ảnh quá 5MB hoặc sai định dạng bị chặn **lúc xin URL** | Phân định §7.4 | `test_chat_media.py` QA-MEDIA-02, QA-MEDIA-07 | ✅ |
+| PRD-CHAT-13 | Không gắn được ảnh của người khác, của hội thoại khác, hoặc gắn hai lần | Phân định §7.4 | `test_chat_media.py` QA-MEDIA-03, QA-MEDIA-04 | ✅ |
+| PRD-CHAT-14 | Người nhận offline nhận push sau 5 giây, nếu tới lúc đó vẫn chưa đọc | Phân định §7.3 | `test_chat_media.py` QA-MEDIA-11, QA-MEDIA-13 | ✅ |
+| PRD-CHAT-15 | Nội dung tin **không** đi vào payload push (màn hình khoá) | Phân định §7.6 | `test_chat_media.py` QA-MEDIA-12 | ✅ |
+| PRD-CHAT-16 | Token thiết bị chết bị gỡ; token đổi chủ khi máy đổi tài khoản | Phân định §7.3 | `test_chat_media.py` QA-MEDIA-09, QA-MEDIA-10 | ✅ |
+| PRD-CHAT-17 | Chat `trip` giữ 12 tháng, chat `support` 24 tháng, sau đó ẩn danh hoá | Phân định §7.6 | `test_chat_media.py` QA-MEDIA-14, QA-MEDIA-15 | ✅ |
 
 > PRD-CHAT-07 không có trong bản PRD gốc: nó là ràng buộc rút ra khi làm P2-04. Chặn tin là
 > đẩy hai bên sang Zalo, và lúc đó không còn gì để rà soát nữa — cờ mà không chặn mới giữ
@@ -177,9 +184,9 @@
 | Chống gian lận | 7 | 6 | 0 | 1 |
 | Bảo mật | 13 | 10 | 0 | 3 |
 | Vận hành | 6 | 3 | 2 | 1 |
-| Chat | 10 | 10 | 0 | 0 |
+| Chat | 17 | 17 | 0 | 0 |
 | Hỗ trợ | 14 | 12 | 0 | 2 |
-| **Tổng** | **87** | **74 (85%)** | **2** | **11** |
+| **Tổng** | **94** | **81 (86%)** | **2** | **11** |
 
 **Hai yêu cầu còn thiếu test** — code đã có nhưng chưa chứng minh được:
 

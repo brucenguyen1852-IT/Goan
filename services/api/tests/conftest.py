@@ -32,6 +32,19 @@ async def db():
     await engine.dispose()
 
 
+@pytest.fixture(autouse=True)
+def khong_day_viec_vao_broker(monkeypatch):
+    """Test không có broker Celery, và mọi bài về push đều gọi thẳng hàm xử lý.
+
+    Không tắt thì mỗi lần gửi tin nhắn phải chờ hết hạn kết nối tới một broker không tồn tại
+    — bộ test chậm đi vài giây cho mỗi tin, vì một thứ không được kiểm ở đây.
+    """
+    from app.config import get_settings
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "PUSH_ON_MESSAGE_ENABLED", False)
+
+
 @pytest.fixture
 def fake_redis() -> FakeRedis:
     return FakeRedis()

@@ -25,6 +25,7 @@ from app.domains.escrow.router import router as escrow_router
 from app.domains.fraud.router import router as fraud_router
 from app.domains.iam.router import router as iam_router
 from app.domains.matching.router import router as matching_router
+from app.domains.notifications.router import router as notifications_router
 from app.domains.ops.router import router as ops_router
 from app.domains.partners.router import router as partners_router
 from app.domains.payments.router import router as payments_router
@@ -94,6 +95,7 @@ for r in (
     fraud_router,
     chat_router,
     support_router,
+    notifications_router,
     iam_router,
     ops_support_router,
     ops_chat_router,
@@ -123,6 +125,7 @@ for audience_router in build_audience_routers(
         fraud_router,
         chat_router,
         support_router,
+        notifications_router,
     ]
 ).values():
     api_v2.include_router(audience_router)

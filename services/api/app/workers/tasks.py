@@ -104,3 +104,40 @@ def release_offline_agent_tickets() -> int:
         return await support_service.release_offline_agents(db)
 
     return _run(run)
+
+
+@celery_app.task(name="app.workers.tasks.purge_orphan_attachments")
+def purge_orphan_attachments() -> int:
+    """Dọn tệp đã xin URL nhưng không bao giờ được gửi (P2-12)."""
+    from app.domains.chat import service as chat_service
+
+    async def run(db):
+        return await chat_service.purge_orphan_attachments(db)
+
+    return _run(run)
+
+
+@celery_app.task(name="app.workers.tasks.deliver_chat_push")
+def deliver_chat_push(message_id: str, user_id: str) -> int:
+    """Push cho người nhận nếu sau vài giây họ vẫn chưa đọc (P2-13)."""
+    import uuid as _uuid
+
+    from app.domains.chat import service as chat_service
+
+    async def run(db):
+        return await chat_service.deliver_offline_push(
+            db, _uuid.UUID(message_id), _uuid.UUID(user_id)
+        )
+
+    return _run(run)
+
+
+@celery_app.task(name="app.workers.tasks.anonymize_expired_chat")
+def anonymize_expired_chat() -> int:
+    """Ẩn danh hoá hội thoại quá hạn lưu trữ 12/24 tháng (P2-20)."""
+    from app.domains.chat import service as chat_service
+
+    async def run(db):
+        return await chat_service.anonymize_expired_conversations(db)
+
+    return _run(run)

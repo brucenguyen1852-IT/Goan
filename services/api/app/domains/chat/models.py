@@ -156,14 +156,44 @@ class Message(Base):
         back_populates="message", lazy="selectin"
     )
 
+    @property
+    def attachment_id(self) -> uuid.UUID | None:
+        """Một tin nhắn ảnh chỉ có đúng một tệp (SPEC 7.2 — cột `attachment_id`).
 
-class MessageAttachment(Base):
+        Quan hệ vẫn để dạng danh sách vì khoá ngoại nằm ở phía tệp; thuộc tính này là thứ
+        schema trả ra, để client không phải hiểu cấu trúc bảng.
+        """
+        return self.attachments[0].id if self.attachments else None
+
+
+class MessageAttachment(Base, TimestampMixin):
+    """Tệp đính kèm. Dòng được tạo lúc XIN URL tải lên, chưa gắn vào tin nhắn nào (P2-12).
+
+    Làm ngược lại — cho client tự khai `storage_key` lúc gửi tin — nghĩa là ai cũng gắn được
+    một khoá bất kỳ vào tin của mình, kể cả khoá tệp của người khác. Ở đây server sinh khoá,
+    ghi lại ngay ai xin nó, rồi mới cho phép gắn đúng dòng đó vào đúng một tin nhắn.
+    """
+
     __tablename__ = "message_attachments"
-    __table_args__ = (Index("ix_message_attachments_message", "message_id"),)
+    __table_args__ = (
+        Index("ix_message_attachments_message", "message_id"),
+        Index("ix_message_attachments_conv", "conversation_id"),
+    )
 
     id: Mapped[uuid.UUID] = uuid_pk()
-    message_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("messages.id", ondelete="CASCADE"), nullable=False
+    # Rỗng = đã xin URL nhưng chưa gửi tin. Người dùng bỏ ngang lúc chọn ảnh là chuyện thường,
+    # nên trạng thái này phải hợp lệ chứ không phải lỗi dữ liệu.
+    message_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("messages.id", ondelete="CASCADE"), nullable=True
+    )
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False
+    )
+    uploader_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    uploader_staff_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("staff_users.id", ondelete="SET NULL"), nullable=True
     )
     # Khoá đối tượng trong kho lưu trữ, KHÔNG phải URL công khai: URL đọc được ký hạn 15 phút
     # mỗi lần cần (P2-12), nên lưu URL cố định là tự mở kho ảnh giấy tờ cho cả internet.

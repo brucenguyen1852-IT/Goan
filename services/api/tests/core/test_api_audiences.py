@@ -13,6 +13,7 @@ from app.domains.chat.router import router as chat_router
 from app.domains.escrow.router import router as escrow_router
 from app.domains.fraud.router import router as fraud_router
 from app.domains.matching.router import router as matching_router
+from app.domains.notifications.router import router as notifications_router
 from app.domains.partners.router import router as partners_router
 from app.domains.payments.router import router as payments_router
 from app.domains.pricing.router import router as pricing_router
@@ -32,6 +33,7 @@ DOMAIN_ROUTERS = [
     fraud_router,
     chat_router,
     support_router,
+    notifications_router,
 ]
 
 

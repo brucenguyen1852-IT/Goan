@@ -61,6 +61,10 @@ AUDIENCES: dict[str, tuple[str, ...]] = {
     "list_messages": ("rider", "driver"),
     "send_message": ("rider", "driver"),
     "mark_read": ("rider", "driver"),
+    "create_attachment_upload": ("rider", "driver"),
+    "get_attachment": ("rider", "driver"),
+    "register_device": ("rider", "driver"),
+    "revoke_device": ("rider", "driver"),
     "create_ticket": ("rider", "driver"),
     "my_tickets": ("rider", "driver"),
     # --- Console (đã có sẵn bề mặt /ops riêng, liệt kê ở đây cho đủ bức tranh) ---

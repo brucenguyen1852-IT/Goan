@@ -21,6 +21,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError
 from app.core.logging import log_event
 from app.domains.chat.constants import (
@@ -29,9 +30,15 @@ from app.domains.chat.constants import (
     MemberRole,
     MessageKind,
 )
-from app.domains.chat.models import Conversation, ConversationMember, Message
+from app.domains.chat.models import (
+    Conversation,
+    ConversationMember,
+    Message,
+    MessageAttachment,
+)
 from app.domains.iam.models import StaffUser
 from app.domains.users.models import User
+from app.integrations.storage import PresignedUpload, get_storage
 
 logger = logging.getLogger("goan.chat")
 
@@ -209,6 +216,7 @@ async def send_message(
     sender_staff: StaffUser | None = None,
     client_msg_id: str | None = None,
     kind: MessageKind = MessageKind.TEXT,
+    attachment: MessageAttachment | None = None,
 ) -> tuple[Message, bool]:
     """Gửi tin. Trả về (tin nhắn, có phải tin mới không).
 
@@ -242,6 +250,9 @@ async def send_message(
         flag_reason=reason,
     )
     db.add(message)
+    if attachment is not None:
+        await db.flush()
+        attachment.message_id = message.id
     conversation.last_message_at = datetime.now(timezone.utc)
     try:
         await db.commit()
@@ -438,3 +449,242 @@ async def agent_leave(db: AsyncSession, conversation: Conversation, staff: Staff
     log_event(
         logger, "chat_agent_left", conversation_id=str(conversation.id), staff_id=str(staff.id)
     )
+
+
+# --- Tệp đính kèm (P2-12) -------------------------------------------------------------
+
+
+def _check_upload(content_type: str, size_bytes: int) -> None:
+    """Chặn ở lúc XIN url, không phải lúc gửi tin.
+
+    Từ chối sau khi người dùng đã ngồi chờ tải xong 20MB qua 4G là cách làm hỏng trải nghiệm
+    một cách hoàn toàn tránh được — và cũng là cách trả tiền băng thông cho một tệp sẽ bị vứt.
+    """
+    settings = get_settings()
+    if content_type not in settings.ATTACHMENT_ALLOWED_TYPES:
+        raise ConflictError(
+            "Chỉ nhận ảnh JPEG, PNG hoặc WebP",
+            details={"content_type": content_type},
+        )
+    if size_bytes <= 0 or size_bytes > settings.ATTACHMENT_MAX_BYTES:
+        raise ConflictError(
+            f"Ảnh vượt quá {settings.ATTACHMENT_MAX_BYTES // (1024 * 1024)}MB",
+            details={"size_bytes": size_bytes, "max_bytes": settings.ATTACHMENT_MAX_BYTES},
+        )
+
+
+async def create_upload(
+    db: AsyncSession,
+    conversation: Conversation,
+    *,
+    content_type: str,
+    size_bytes: int,
+    uploader_user: User | None = None,
+    uploader_staff: StaffUser | None = None,
+) -> tuple[MessageAttachment, PresignedUpload]:
+    """Cấp URL tải lên có hạn và ghi trước dòng tệp đính kèm (chưa gắn vào tin nào)."""
+    if conversation.status is ConversationStatus.CLOSED:
+        raise ConflictError("Hội thoại đã đóng")
+    _check_upload(content_type, size_bytes)
+
+    storage = get_storage()
+    key = storage.build_key(conversation_id=conversation.id, content_type=content_type)
+    presigned = storage.presigned_put(
+        key, content_type=content_type, max_bytes=get_settings().ATTACHMENT_MAX_BYTES
+    )
+    attachment = MessageAttachment(
+        conversation_id=conversation.id,
+        storage_key=key,
+        content_type=content_type,
+        size_bytes=size_bytes,
+        uploader_user_id=uploader_user.id if uploader_user else None,
+        uploader_staff_id=uploader_staff.id if uploader_staff else None,
+    )
+    db.add(attachment)
+    await db.commit()
+    await db.refresh(attachment)
+    log_event(
+        logger,
+        "chat_attachment_presigned",
+        conversation_id=str(conversation.id),
+        attachment_id=str(attachment.id),
+    )
+    return attachment, presigned
+
+
+async def claim_attachment(
+    db: AsyncSession,
+    conversation: Conversation,
+    attachment_id: uuid.UUID,
+    *,
+    uploader_user: User | None = None,
+    uploader_staff: StaffUser | None = None,
+) -> MessageAttachment:
+    """Lấy tệp đính kèm để gắn vào một tin nhắn, sau khi kiểm đúng người và đúng hội thoại.
+
+    Ba điều kiện, thiếu cái nào cũng thành một lỗ: đúng hội thoại (không kéo ảnh từ cuộc trò
+    chuyện khác sang), đúng người tải lên (không gắn ảnh của người khác vào tin của mình), và
+    chưa gắn vào tin nào (không dùng lại một ảnh cho nhiều tin để né kiểm duyệt).
+    """
+    attachment = await db.get(MessageAttachment, attachment_id)
+    if attachment is None or attachment.conversation_id != conversation.id:
+        raise NotFoundError("Không tìm thấy tệp đính kèm")
+    if uploader_user is not None and attachment.uploader_user_id != uploader_user.id:
+        raise PermissionDeniedError("Không tìm thấy tệp đính kèm")
+    if uploader_staff is not None and attachment.uploader_staff_id != uploader_staff.id:
+        raise PermissionDeniedError("Không tìm thấy tệp đính kèm")
+    if attachment.message_id is not None:
+        raise ConflictError("Tệp đính kèm đã được gửi rồi")
+    return attachment
+
+
+async def attachment_download_url(db: AsyncSession, attachment: MessageAttachment) -> str:
+    """URL đọc ký hạn ngắn. Sinh mới mỗi lần xem, không lưu lại."""
+    return get_storage().presigned_get(attachment.storage_key)
+
+
+async def get_attachment_for_member(
+    db: AsyncSession,
+    attachment_id: uuid.UUID,
+    *,
+    user: User | None = None,
+    staff: StaffUser | None = None,
+) -> MessageAttachment:
+    """Đọc tệp đính kèm với đúng ràng buộc thành viên như đọc tin nhắn."""
+    attachment = await db.get(MessageAttachment, attachment_id)
+    if attachment is None:
+        raise PermissionDeniedError("Không tìm thấy tệp đính kèm")
+    conversation, _ = await get_member_conversation(
+        db, attachment.conversation_id, user=user, staff=staff
+    )
+    assert conversation is not None
+    return attachment
+
+
+async def purge_orphan_attachments(
+    db: AsyncSession, *, older_than_hours: int = 24, now: datetime | None = None
+) -> int:
+    """Dọn tệp đã xin URL nhưng không bao giờ được gửi (P2-12).
+
+    Người dùng chọn ảnh rồi đổi ý là chuyện thường; không dọn thì kho lưu trữ phình ra vì
+    những tệp không ai từng nhìn thấy, và mỗi tệp đó vẫn là dữ liệu cá nhân đang được giữ.
+    """
+    moment = now or datetime.now(timezone.utc)
+    cutoff = moment - timedelta(hours=older_than_hours)
+    rows = (
+        (await db.execute(select(MessageAttachment).where(MessageAttachment.message_id.is_(None))))
+        .scalars()
+        .all()
+    )
+    dem = 0
+    for attachment in rows:
+        moc = attachment.created_at
+        if moc.tzinfo is None:
+            moc = moc.replace(tzinfo=timezone.utc)
+        if moc <= cutoff:
+            await db.delete(attachment)
+            dem += 1
+    if dem:
+        await db.commit()
+        log_event(logger, "chat_orphan_attachments_purged", count=dem)
+    return dem
+
+
+# --- Push cho người đang offline (P2-13) ----------------------------------------------
+
+
+async def deliver_offline_push(db: AsyncSession, message_id: uuid.UUID, user_id: uuid.UUID) -> int:
+    """Gửi push cho một thành viên NẾU tới lúc này họ vẫn chưa đọc tin đó.
+
+    Chạy trễ vài giây có chủ đích (SPEC 7.3 bước 7). Người dùng đang mở app thì tin đã hiện
+    qua WebSocket từ lâu, và bắn thêm một thông báo đẩy cho tin họ vừa đọc xong là cách làm
+    người ta tắt thông báo của ứng dụng — sau đó thì không còn kênh nào tới được họ nữa.
+    """
+    from app.domains.notifications import service as notifications
+
+    message = await db.get(Message, message_id)
+    if message is None:
+        return 0
+    member = (
+        await db.execute(
+            select(ConversationMember).where(
+                ConversationMember.conversation_id == message.conversation_id,
+                ConversationMember.user_id == user_id,
+                ConversationMember.left_at.is_(None),
+            )
+        )
+    ).scalar_one_or_none()
+    if member is None:
+        return 0
+
+    moc = message.created_at
+    if moc.tzinfo is None:
+        moc = moc.replace(tzinfo=timezone.utc)
+    da_doc = member.last_read_at
+    if da_doc is not None and da_doc.tzinfo is None:
+        da_doc = da_doc.replace(tzinfo=timezone.utc)
+    if da_doc is not None and da_doc >= moc:
+        return 0
+
+    # Nội dung tin KHÔNG đi vào payload: thông báo hiện trên màn hình khoá, người ngồi cạnh
+    # cũng đọc được. Đủ để người dùng biết cần mở app, không đủ để rò rỉ cuộc trò chuyện.
+    return await notifications.send_push(
+        db,
+        user_id,
+        title="GoAn",
+        body="Bạn có tin nhắn mới",
+        data={"conversation_id": str(message.conversation_id), "message_id": str(message.id)},
+    )
+
+
+# --- Ẩn danh hoá hội thoại quá hạn lưu trữ (P2-20) -------------------------------------
+
+# Dấu để nhận ra dòng đã xử lý: quét lại lần sau không được đụng vào nữa, và người đọc DB
+# phải phân biệt được "tin rỗng" với "tin đã ẩn danh hoá".
+ANONYMIZED_BODY = "[nội dung đã ẩn danh hoá theo hạn lưu trữ]"
+
+
+async def anonymize_expired_conversations(
+    db: AsyncSession, *, now: datetime | None = None, batch: int = 500
+) -> int:
+    """Xoá nội dung tin nhắn quá hạn lưu trữ, giữ lại khung cuộc trò chuyện (P2-20).
+
+    Ẩn danh hoá chứ KHÔNG xoá dòng. Xoá thì mất luôn khả năng trả lời "hai người này có từng
+    nhắn tin cho nhau không" — câu hỏi mà cả toà án lẫn đội chống gian lận đều sẽ hỏi. Giữ
+    khung mà bỏ nội dung là đủ cho cả hai phía: không còn dữ liệu cá nhân, vẫn còn dấu vết.
+
+    Hạn khác nhau theo loại có chủ đích: chat hỗ trợ là bằng chứng khiếu nại và khiếu nại
+    đến muộn, nên giữ gấp đôi chat chuyến.
+    """
+    settings = get_settings()
+    moment = now or datetime.now(timezone.utc)
+    han = {
+        ConversationKind.TRIP: settings.CHAT_RETENTION_MONTHS_TRIP,
+        ConversationKind.SUPPORT: settings.CHAT_RETENTION_MONTHS_SUPPORT,
+        ConversationKind.INTERNAL: settings.CHAT_RETENTION_MONTHS_SUPPORT,
+    }
+
+    dem = 0
+    for kind, thang in han.items():
+        # 30 ngày/tháng: hạn lưu trữ là ngưỡng chính sách, không phải mốc pháp lý tính theo
+        # ngày — chính xác tới ngày ở đây không đổi kết quả mà chỉ thêm chỗ sai.
+        cutoff = moment - timedelta(days=30 * thang)
+        stmt = (
+            select(Message)
+            .join(Conversation, Conversation.id == Message.conversation_id)
+            .where(
+                Conversation.kind == kind,
+                Message.created_at <= cutoff,
+                Message.body != ANONYMIZED_BODY,
+            )
+            .limit(batch)
+        )
+        for message in (await db.execute(stmt)).scalars().all():
+            message.body = ANONYMIZED_BODY
+            message.flag_reason = None
+            dem += 1
+
+    if dem:
+        await db.commit()
+        log_event(logger, "chat_messages_anonymized", count=dem)
+    return dem

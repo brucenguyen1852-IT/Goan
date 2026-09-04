@@ -311,6 +311,70 @@
         "title": "AssignDriverRequest",
         "type": "object"
       },
+      "AttachmentOut": {
+        "properties": {
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "scan_result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Result"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "conversation_id",
+          "content_type",
+          "size_bytes"
+        ],
+        "title": "AttachmentOut",
+        "type": "object"
+      },
       "AuditLogOut": {
         "properties": {
           "action": {
@@ -807,6 +871,15 @@
         ],
         "title": "DecisionRequest",
         "type": "object"
+      },
+      "DevicePlatform": {
+        "enum": [
+          "android",
+          "ios",
+          "web"
+        ],
+        "title": "DevicePlatform",
+        "type": "string"
       },
       "DriverApprovalStatus": {
         "description": "Duyệt hồ sơ tài xế (P1-10). Khác với UserStatus: hồ sơ được duyệt rồi vẫn có thể bị\nkhoá tài khoản vì gian lận, và ngược lại tài khoản đang hoạt động vẫn có thể chờ duyệt.",
@@ -1652,6 +1725,18 @@
       },
       "MessageOut": {
         "properties": {
+          "attachment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Id"
+          },
           "body": {
             "title": "Body",
             "type": "string"
@@ -2328,6 +2413,23 @@
         "title": "PresenceRequest",
         "type": "object"
       },
+      "PushTokenOut": {
+        "properties": {
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/DevicePlatform"
+          }
+        },
+        "required": [
+          "platform",
+          "is_active"
+        ],
+        "title": "PushTokenOut",
+        "type": "object"
+      },
       "RateTripRequest": {
         "properties": {
           "comment": {
@@ -2482,6 +2584,25 @@
           "scheduled_payout_date"
         ],
         "title": "RefundRequestResponse",
+        "type": "object"
+      },
+      "RegisterPushTokenRequest": {
+        "properties": {
+          "platform": {
+            "$ref": "#/components/schemas/DevicePlatform"
+          },
+          "token": {
+            "maxLength": 255,
+            "minLength": 8,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "platform"
+        ],
+        "title": "RegisterPushTokenRequest",
         "type": "object"
       },
       "ReopenRequest": {
@@ -2665,6 +2786,18 @@
       },
       "SendMessageRequest": {
         "properties": {
+          "attachment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Id"
+          },
           "body": {
             "maxLength": 4000,
             "minLength": 1,
@@ -3881,6 +4014,67 @@
         "title": "TrustedDeviceOut",
         "type": "object"
       },
+      "UploadOut": {
+        "properties": {
+          "attachment_id": {
+            "format": "uuid",
+            "title": "Attachment Id",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "max_bytes": {
+            "title": "Max Bytes",
+            "type": "integer"
+          },
+          "storage_key": {
+            "title": "Storage Key",
+            "type": "string"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attachment_id",
+          "storage_key",
+          "upload_url",
+          "expires_at",
+          "max_bytes"
+        ],
+        "title": "UploadOut",
+        "type": "object"
+      },
+      "UploadRequest": {
+        "properties": {
+          "content_type": {
+            "maxLength": 100,
+            "title": "Content Type",
+            "type": "string"
+          },
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "size_bytes": {
+            "exclusiveMinimum": 0.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conversation_id",
+          "content_type",
+          "size_bytes"
+        ],
+        "title": "UploadRequest",
+        "type": "object"
+      },
       "UserOut": {
         "properties": {
           "avatar_url": {
@@ -4529,6 +4723,104 @@
         ]
       }
     },
+    "/api/v1/chat/attachments": {
+      "post": {
+        "deprecated": true,
+        "description": "Xin URL tải ảnh lên, có hạn 15 phút.\n\nẢnh đi THẲNG lên kho, không qua backend: một ảnh 5MB đi qua tiến trình API là chiếm một\nworker suốt thời gian truyền, đúng lúc mạng của người gửi đang chậm nhất.",
+        "operationId": "create_attachment_upload_api_v1_chat_attachments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Attachment Upload",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/attachments/{attachment_id}": {
+      "get": {
+        "deprecated": true,
+        "description": "URL đọc ký hạn ngắn, sinh mới mỗi lần xem chứ không lưu lại.",
+        "operationId": "get_attachment_api_v1_chat_attachments__attachment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Attachment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Attachment",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
     "/api/v1/chat/conversations": {
       "get": {
         "deprecated": true,
@@ -4776,6 +5068,102 @@
         "summary": "Mark Read",
         "tags": [
           "chat"
+        ]
+      }
+    },
+    "/api/v1/driver/chat/attachments": {
+      "post": {
+        "description": "Xin URL tải ảnh lên, có hạn 15 phút.\n\nẢnh đi THẲNG lên kho, không qua backend: một ảnh 5MB đi qua tiến trình API là chiếm một\nworker suốt thời gian truyền, đúng lúc mạng của người gửi đang chậm nhất.",
+        "operationId": "create_attachment_upload_api_v1_driver_chat_attachments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Attachment Upload",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/chat/attachments/{attachment_id}": {
+      "get": {
+        "description": "URL đọc ký hạn ngắn, sinh mới mỗi lần xem chứ không lưu lại.",
+        "operationId": "get_attachment_api_v1_driver_chat_attachments__attachment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Attachment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Attachment",
+        "tags": [
+          "driver"
         ]
       }
     },
@@ -5513,6 +5901,91 @@
           }
         ],
         "summary": "Accept Trip",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/notifications/devices": {
+      "delete": {
+        "description": "Đăng xuất thì gỡ token của MÁY NÀY, không đụng tới các máy khác của cùng người.",
+        "operationId": "revoke_device_api_v1_driver_notifications_devices_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPushTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Device",
+        "tags": [
+          "driver"
+        ]
+      },
+      "post": {
+        "description": "Đăng ký token thiết bị. Gửi lại cùng token thì cập nhật, không tạo dòng thứ hai.",
+        "operationId": "register_device_api_v1_driver_notifications_devices_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPushTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushTokenOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Register Device",
         "tags": [
           "driver"
         ]
@@ -6339,6 +6812,93 @@
         "summary": "Accept Trip",
         "tags": [
           "matching"
+        ]
+      }
+    },
+    "/api/v1/notifications/devices": {
+      "delete": {
+        "deprecated": true,
+        "description": "Đăng xuất thì gỡ token của MÁY NÀY, không đụng tới các máy khác của cùng người.",
+        "operationId": "revoke_device_api_v1_notifications_devices_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPushTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Device",
+        "tags": [
+          "notifications"
+        ]
+      },
+      "post": {
+        "deprecated": true,
+        "description": "Đăng ký token thiết bị. Gửi lại cùng token thì cập nhật, không tạo dòng thứ hai.",
+        "operationId": "register_device_api_v1_notifications_devices_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPushTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushTokenOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Register Device",
+        "tags": [
+          "notifications"
         ]
       }
     },
@@ -9810,6 +10370,102 @@
         ]
       }
     },
+    "/api/v1/rider/chat/attachments": {
+      "post": {
+        "description": "Xin URL tải ảnh lên, có hạn 15 phút.\n\nẢnh đi THẲNG lên kho, không qua backend: một ảnh 5MB đi qua tiến trình API là chiếm một\nworker suốt thời gian truyền, đúng lúc mạng của người gửi đang chậm nhất.",
+        "operationId": "create_attachment_upload_api_v1_rider_chat_attachments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Attachment Upload",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
+    "/api/v1/rider/chat/attachments/{attachment_id}": {
+      "get": {
+        "description": "URL đọc ký hạn ngắn, sinh mới mỗi lần xem chứ không lưu lại.",
+        "operationId": "get_attachment_api_v1_rider_chat_attachments__attachment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Attachment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Attachment",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
     "/api/v1/rider/chat/conversations": {
       "get": {
         "operationId": "list_conversations_api_v1_rider_chat_conversations_get",
@@ -10051,6 +10707,91 @@
           }
         ],
         "summary": "Mark Read",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
+    "/api/v1/rider/notifications/devices": {
+      "delete": {
+        "description": "Đăng xuất thì gỡ token của MÁY NÀY, không đụng tới các máy khác của cùng người.",
+        "operationId": "revoke_device_api_v1_rider_notifications_devices_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPushTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Device",
+        "tags": [
+          "rider"
+        ]
+      },
+      "post": {
+        "description": "Đăng ký token thiết bị. Gửi lại cùng token thì cập nhật, không tạo dòng thứ hai.",
+        "operationId": "register_device_api_v1_rider_notifications_devices_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPushTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushTokenOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Register Device",
         "tags": [
           "rider"
         ]

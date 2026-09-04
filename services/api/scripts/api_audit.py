@@ -639,6 +639,54 @@ def main():
             403,
             admin.get(f"/chat/conversations/{cid}/messages").status_code,
         )
+        # Ảnh đính kèm (P2-12): xin URL có hạn, gắn vào tin, rồi lấy URL đọc.
+        r = rider.post(
+            "/chat/attachments",
+            json={"conversation_id": cid, "content_type": "image/jpeg", "size_bytes": 150000},
+        )
+        check("chat", "POST", "/chat/attachments", 201, r.status_code, r.text[:70])
+        if r.status_code == 201:
+            att = r.json()["attachment_id"]
+            check(
+                "chat",
+                "POST",
+                "/chat/conversations/{id}/messages (kèm ảnh)",
+                201,
+                rider.post(
+                    f"/chat/conversations/{cid}/messages",
+                    json={"body": "Ảnh hiện trường", "attachment_id": att},
+                ).status_code,
+            )
+            r = rider.get(f"/chat/attachments/{att}")
+            check("chat", "GET", "/chat/attachments/{id}", 200, r.status_code)
+            check(
+                "chat",
+                "GET",
+                "/chat/attachments/{id} (URL đọc có hạn, không cố định)",
+                200,
+                200 if r.status_code == 200 and "X-Expires=" in r.json()["download_url"] else 0,
+            )
+            check(
+                "chat",
+                "GET",
+                "/chat/attachments/{id} (người ngoài)",
+                403,
+                admin.get(f"/chat/attachments/{att}").status_code,
+            )
+        check(
+            "chat",
+            "POST",
+            "/chat/attachments (quá 5MB)",
+            409,
+            rider.post(
+                "/chat/attachments",
+                json={
+                    "conversation_id": cid,
+                    "content_type": "image/jpeg",
+                    "size_bytes": 6 * 1024 * 1024,
+                },
+            ).status_code,
+        )
     check(
         "chat",
         "GET",
@@ -646,6 +694,28 @@ def main():
         403,
         rider.get(f"/chat/conversations/{uuid.uuid4()}/messages").status_code,
         "cố tình cùng mã với 'không phải thành viên': dò id cũng là rò rỉ",
+    )
+
+    # Thiết bị nhận push (P2-13)
+    check(
+        "chat",
+        "POST",
+        "/notifications/devices",
+        201,
+        rider.post(
+            "/notifications/devices", json={"token": "fcm-audit-token", "platform": "android"}
+        ).status_code,
+    )
+    check(
+        "chat",
+        "DELETE",
+        "/notifications/devices",
+        204,
+        rider.request(
+            "DELETE",
+            "/notifications/devices",
+            json={"token": "fcm-audit-token", "platform": "android"},
+        ).status_code,
     )
 
     r = rider.post(
