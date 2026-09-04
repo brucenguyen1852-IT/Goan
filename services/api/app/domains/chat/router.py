@@ -74,7 +74,11 @@ async def send_message(
     attachment = None
     if body.attachment_id is not None:
         attachment = await service.claim_attachment(
-            db, conversation, body.attachment_id, uploader_user=user
+            db,
+            conversation,
+            body.attachment_id,
+            uploader_user=user,
+            client_msg_id=body.client_msg_id,
         )
     message, created = await service.send_message(
         db,

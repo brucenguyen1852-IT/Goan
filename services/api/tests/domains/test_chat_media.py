@@ -484,3 +484,49 @@ async def test_tin_con_trong_han_khong_bi_dung_toi(db):
     assert await service.anonymize_expired_conversations(db) == 0
     await db.refresh(tin)
     assert tin.body == "Anh tới chưa"
+
+
+@pytest.mark.integration
+async def test_gui_lai_anh_cung_client_msg_id_khong_bi_bao_da_gui_roi(db):
+    """QA-MEDIA-16. Bài kịch bản E2E bắt được lỗi này: người dùng mất sóng lúc gửi ảnh, bấm
+    gửi lại, và nhận 409 "tệp đã được gửi rồi" — đúng lúc họ đang cố gửi ảnh hiện trường."""
+    rider, _, conversation = await _trip_chat(
+        db, rider_phone="0901000121", driver_phone="0902000121"
+    )
+    attachment, _ = await service.create_upload(
+        db, conversation, content_type="image/jpeg", size_bytes=1000, uploader_user=rider
+    )
+    lan_1 = await service.claim_attachment(
+        db, conversation, attachment.id, uploader_user=rider, client_msg_id="a-1"
+    )
+    tin, _ = await service.send_message(
+        db,
+        conversation,
+        body="Ảnh",
+        sender_user=rider,
+        client_msg_id="a-1",
+        kind=MessageKind.IMAGE,
+        attachment=lan_1,
+    )
+
+    lan_2 = await service.claim_attachment(
+        db, conversation, attachment.id, uploader_user=rider, client_msg_id="a-1"
+    )
+    lai, moi = await service.send_message(
+        db,
+        conversation,
+        body="Ảnh",
+        sender_user=rider,
+        client_msg_id="a-1",
+        kind=MessageKind.IMAGE,
+        attachment=lan_2,
+    )
+
+    assert moi is False and lai.id == tin.id
+    assert len((await db.execute(select(Message))).scalars().all()) == 1
+
+    # Nhưng client_msg_id KHÁC thì vẫn là dùng lại ảnh cho tin thứ hai — phải bị chặn.
+    with pytest.raises(ConflictError):
+        await service.claim_attachment(
+            db, conversation, attachment.id, uploader_user=rider, client_msg_id="a-2"
+        )

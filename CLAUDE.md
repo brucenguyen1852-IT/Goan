@@ -13,6 +13,8 @@ pnpm + turbo: **một** backend duy nhất phục vụ 5 sản phẩm frontend (
 | `apps/customer-web` | Web MVP cho khách (React + Vite + Zustand + axios) |
 | `apps/ops-console` | Console vận hành nội bộ (React + Vite, đăng nhập 2FA, RBAC) |
 | `packages/api-client` | Client TS sinh từ OpenAPI — contract giữa backend và mọi frontend |
+| `packages/realtime-client` | Client WebSocket dùng chung (nối lại lùi dần, xếp hàng khi đứt, chờ ack) |
+| `packages/ui` | Thành phần web dùng chung + Storybook |
 | `docs/` | PRD: kiến trúc, luồng thanh toán, phân định hệ thống + `docs/QA/` |
 
 ## Lệnh
@@ -29,7 +31,7 @@ Backend chạy trong `services/api` với venv đã kích hoạt (`source .venv/
 | Dev server | `make -C services/api dev` → http://localhost:8000/docs |
 | Migration | `alembic upgrade head` · `alembic check` (model lệch migration là đỏ) |
 | Sinh lại contract API | `make -C services/api openapi` rồi `pnpm --filter @goan/api-client generate` (gộp: `pnpm api:client`) |
-| Smoke E2E (server thật) | `make -C services/api smoke` — 22 bước, một luồng nghiệp vụ |
+| Smoke E2E (server thật) | `make -C services/api smoke` — 33 bước, một luồng nghiệp vụ |
 | Rà soát ngang API | `make -C services/api audit` — mọi endpoint, mọi vai trò, cả trường hợp phải bị từ chối |
 | Frontend | `pnpm dev` · `pnpm build` · `pnpm typecheck` (turbo, từ thư mục gốc) |
 
@@ -44,7 +46,8 @@ Postgres/Redis (SQLite in-memory + `tests/fakes.FakeRedis`).
 **Vertical slice theo domain.** `app/domains/<tên>/` gồm `router.py` (HTTP) → `service.py`
 (nghiệp vụ) → `models.py` (ORM) + `schemas.py` (Pydantic). Router không chứa logic; service
 không biết HTTP. Domain hiện có: `auth`, `users`, `pricing`, `trips`, `matching`, `fraud`,
-`escrow`, `payments`, `partners`, `notifications`, `audit`.
+`escrow`, `payments`, `partners`, `notifications`, `audit`, `iam`, `approvals`, `ops`,
+`chat`, `support`.
 
 **Thứ tự middleware trong `app/main.py` là ràng buộc, không phải sở thích.** Starlette chạy
 ngược thứ tự `add_middleware`, nên chuỗi thực thi là
@@ -82,6 +85,23 @@ handler chuyển thành `{"error": {"code", "message", "details"}}` với thông
 Redis pub/sub (nhiều instance). Vị trí tài xế nằm ở Redis GEO nên matching chạy được cả khi
 DB là SQLite (dev). Job nền ở `app/workers/tasks.py` (Celery beat: nhả ví, hết hạn matching,
 đối soát ngày, quét tín hiệu ngoài app, chi hoàn ký quỹ).
+
+**Chat và hỗ trợ có bốn ràng buộc không được đụng vào.** (1) Khử trùng theo
+`(conversation_id, client_msg_id)` — ràng buộc UNIQUE ở DB, kèm nhánh bắt `IntegrityError`;
+mất sóng rồi bấm gửi lại là chuyện hằng ngày. (2) `Message.created_at` sinh ở **Python**, không
+dùng `func.now()`: trên Postgres `now()` trả về thời điểm bắt đầu transaction nên mọi tin trong
+cùng transaction có cùng mốc và thứ tự loạn. (3) Rời hội thoại ghi `left_at`, **không xoá dòng**
+— khiếu nại đến sau vài tuần và câu hỏi đầu tiên luôn là "lúc đó ai đang ở trong cuộc". (4) Rủ
+thanh toán ngoài app bị **gắn cờ chứ không chặn**: chặn nhầm là đẩy hai bên sang Zalo và mất
+luôn dấu vết. SLA đo **phản hồi đầu tiên** và ghi đúng một lần; ghi đè mỗi lần trả lời sẽ biến
+nó thành "phản hồi cuối" — một con số luôn đẹp và vô nghĩa.
+
+**Ảnh và push đụng tới dữ liệu cá nhân sau khi cuộc trò chuyện kết thúc.** Ảnh không có URL cố
+định: mỗi lần xem sinh một URL ký hạn 15 phút (`integrations/storage.py`), khoá lưu trữ do
+server sinh chứ không nhận từ client. Nội dung tin **không** đi vào payload push — thông báo
+hiện trên màn hình khoá. Hạn lưu trữ 12 tháng (chat chuyến) / 24 tháng (chat hỗ trợ), quá hạn
+thì **ẩn danh hoá chứ không xoá dòng**: xoá là mất luôn khả năng trả lời "hai người này có từng
+nhắn tin cho nhau không".
 
 **Hai thế giới tài khoản tách hẳn nhau.** Khách/tài xế ở `users` (đăng nhập OTP theo SĐT);
 nhân sự nội bộ ở `staff_users` (email + mật khẩu + TOTP). Token nội bộ mang `role="staff"` và

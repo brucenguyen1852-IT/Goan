@@ -519,6 +519,7 @@ async def claim_attachment(
     *,
     uploader_user: User | None = None,
     uploader_staff: StaffUser | None = None,
+    client_msg_id: str | None = None,
 ) -> MessageAttachment:
     """Lấy tệp đính kèm để gắn vào một tin nhắn, sau khi kiểm đúng người và đúng hội thoại.
 
@@ -534,6 +535,14 @@ async def claim_attachment(
     if uploader_staff is not None and attachment.uploader_staff_id != uploader_staff.id:
         raise PermissionDeniedError("Không tìm thấy tệp đính kèm")
     if attachment.message_id is not None:
+        # Mất sóng ngay lúc gửi ảnh rồi bấm gửi lại là chuyện hằng ngày. Lần gửi lại mang
+        # đúng `client_msg_id` cũ, và tin cũ với ảnh cũ vẫn là một cặp hợp lệ — đây KHÔNG
+        # phải chuyện dùng lại một ảnh cho tin thứ hai. Thiếu nhánh này thì người dùng bấm
+        # gửi lại và nhận 409, đúng lúc họ đang cố gửi ảnh hiện trường một vụ tai nạn.
+        if client_msg_id:
+            da_gui = await db.get(Message, attachment.message_id)
+            if da_gui is not None and da_gui.client_msg_id == client_msg_id:
+                return attachment
         raise ConflictError("Tệp đính kèm đã được gửi rồi")
     return attachment
 

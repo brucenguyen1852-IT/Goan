@@ -268,8 +268,101 @@ for t in e.get("transactions", [])[:3]:
         f"        bút toán: {t['type']} {t['amount']}đ → số dư {t['balance_after']}đ · {t['note']}"
     )
 
-# --- 11. Xoay vòng refresh token ---
-print("\n11. BẢO MẬT — XOAY VÒNG REFRESH TOKEN")
+# --- 11. Chat: hội thoại tự mở, khử trùng, đồng bộ bù (P2-21) ---
+print("\n11. CHAT — MẤT SÓNG GIỮA CHỪNG RỒI GỬI LẠI")
+r = rider.get("/chat/conversations")
+conv = next((c for c in (r.json() if r.status_code == 200 else []) if c.get("trip_id")), None)
+show(
+    "Hội thoại chuyến TỰ mở lúc ghép tài xế",
+    conv is not None,
+    "không có endpoint nào để tạo chat — đó là điều cần chứng minh",
+)
+if conv:
+    cid = conv["id"]
+    r = rider.post(
+        f"/chat/conversations/{cid}/messages",
+        json={"body": "Anh ơi em ở cổng sau", "client_msg_id": "smoke-1"},
+    )
+    moc = r.json().get("created_at") if r.status_code == 201 else None
+    show("Khách gửi được tin", r.status_code == 201, r.text[:100] if r.status_code != 201 else "")
+
+    # Mất sóng: app không biết server đã nhận chưa nên bấm gửi lại ba lần.
+    lai = [
+        rider.post(
+            f"/chat/conversations/{cid}/messages",
+            json={"body": "Anh tới chưa ạ", "client_msg_id": "smoke-2"},
+        )
+        for _ in range(3)
+    ]
+    ids = {x.json().get("id") for x in lai if x.status_code == 201}
+    show(
+        "Bấm gửi lại 3 lần → vẫn đúng MỘT tin",
+        len(ids) == 1,
+        f"{len(ids)} tin được tạo cho cùng một client_msg_id",
+    )
+
+    driver.post(f"/chat/conversations/{cid}/messages", json={"body": "Anh đang tới"})
+    r = rider.get(f"/chat/conversations/{cid}/messages", params={"after": moc})
+    bu = [m["body"] for m in r.json()] if r.status_code == 200 else []
+    show(
+        "Có mạng lại → đồng bộ bù đủ tin đã lỡ",
+        bu == ["Anh tới chưa ạ", "Anh đang tới"],
+        f"nhận về: {bu}",
+    )
+
+    r = rider.post(
+        "/chat/attachments",
+        json={"conversation_id": cid, "content_type": "image/jpeg", "size_bytes": 200000},
+    )
+    show("Xin URL tải ảnh (ký hạn 15 phút)", r.status_code == 201, r.text[:100])
+    if r.status_code == 201:
+        att = r.json()["attachment_id"]
+        r = rider.get(f"/chat/attachments/{att}")
+        show(
+            "URL đọc ảnh có hạn, không phải link cố định",
+            r.status_code == 200 and "X-Expires=" in r.json().get("download_url", ""),
+            r.text[:100] if r.status_code != 200 else "",
+        )
+
+    r = driver.post(
+        f"/chat/conversations/{cid}/messages",
+        json={"body": "Em chuyển khoản Vietcombank 0123456789 nhé, khỏi qua app"},
+    )
+    doc = rider.get(f"/chat/conversations/{cid}/messages")
+    van_doc_duoc = r.status_code == 201 and any(
+        "0123456789" in m["body"] for m in (doc.json() if doc.status_code == 200 else [])
+    )
+    show(
+        "Rủ thanh toán ngoài app: GẮN CỜ nhưng KHÔNG chặn tin",
+        van_doc_duoc,
+        "chặn tin là đẩy hai bên sang Zalo và mất luôn dấu vết",
+    )
+
+# --- 12. Hỗ trợ: mở ticket, SLA, trả lời (P2-21) ---
+print("\n12. HỖ TRỢ — MỞ TICKET VÀ CAM KẾT SLA")
+r = rider.post(
+    "/support/tickets",
+    json={"subject": "Bị trừ tiền hai lần", "category": "payment", "priority": "low"},
+)
+t = r.json() if r.status_code == 201 else {}
+show("Khách mở được ticket", r.status_code == 201, r.text[:100] if r.status_code != 201 else "")
+show(
+    "Khách chọn 'thấp' nhưng vấn đề TIỀN → tự nâng lên high, vào đội finance",
+    t.get("priority") == "high" and t.get("team") == "finance",
+    f"priority={t.get('priority')} team={t.get('team')}",
+)
+show(
+    "Ticket có mã ngắn đọc được qua điện thoại",
+    str(t.get("code", "")).startswith("GA-"),
+    f"mã: {t.get('code')}",
+)
+show(
+    "Hội thoại hỗ trợ đi kèm ticket, không phải gọi thêm API",
+    bool(t.get("conversation_id")),
+)
+
+# --- 13. Xoay vòng refresh token ---
+print("\n13. BẢO MẬT — XOAY VÒNG REFRESH TOKEN")
 c = httpx.Client(base_url=API, timeout=20)
 old_rt = rider_tok["refresh_token"]
 r = c.post("/auth/refresh", json={"refresh_token": old_rt})
@@ -288,8 +381,8 @@ show(
     f"HTTP {r.status_code} → buộc đăng nhập lại bằng OTP",
 )
 
-# --- 12. Rate limit ---
-print("\n12. BẢO MẬT — CHẶN SPAM OTP (mỗi tin SMS là tiền thật)")
+# --- 14. Rate limit ---
+print("\n14. BẢO MẬT — CHẶN SPAM OTP (mỗi tin SMS là tiền thật)")
 codes = [
     httpx.post(API + "/auth/request-otp", json={"phone": "0909999999"}, timeout=10).status_code
     for _ in range(7)
@@ -298,8 +391,8 @@ show("Gọi /auth/request-otp 7 lần liên tiếp", 429 in codes, f"mã trả v
 print("        Hạn mức: 5 lượt / 5 phút. Kịch bản này đã dùng 2 lượt ở bước đăng nhập,")
 print("        nên chỉ còn 3 lượt → đúng như quan sát. Hạn mức tính theo ĐỊA CHỈ IP.")
 
-# --- 13. Audit log ---
-print("\n13. AUDIT LOG — dấu vết thao tác")
+# --- 15. Audit log ---
+print("\n15. AUDIT LOG — dấu vết thao tác")
 # Đọc thẳng từ DB đang chạy, dù là SQLite (dev) hay Postgres (staging). Trước đây bài này
 # chỉ mở được file SQLite, nên chạy trên staging là ngã ở đúng bước cuối.
 rows = read_audit_rows()
