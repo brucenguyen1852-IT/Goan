@@ -29,6 +29,9 @@ from app.domains.ops.router import router as ops_router
 from app.domains.partners.router import router as partners_router
 from app.domains.payments.router import router as payments_router
 from app.domains.pricing.router import router as pricing_router
+from app.domains.support.ops_router import chat_router as ops_chat_router
+from app.domains.support.ops_router import router as ops_support_router
+from app.domains.support.router import router as support_router
 from app.domains.trips.router import ops_router as trips_ops_router
 from app.domains.trips.router import router as trips_router
 from app.domains.users.ops_router import router as ops_users_router
@@ -90,7 +93,10 @@ for r in (
     partners_router,
     fraud_router,
     chat_router,
+    support_router,
     iam_router,
+    ops_support_router,
+    ops_chat_router,
     ops_users_router,
     approvals_router,
     ops_router,
@@ -115,6 +121,8 @@ for audience_router in build_audience_routers(
         payments_router,
         partners_router,
         fraud_router,
+        chat_router,
+        support_router,
     ]
 ).values():
     api_v2.include_router(audience_router)

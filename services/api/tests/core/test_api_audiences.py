@@ -9,12 +9,14 @@ import pytest
 
 from app.api import AUDIENCE_NAMES, AUDIENCES, unassigned_routes
 from app.domains.auth.router import router as auth_router
+from app.domains.chat.router import router as chat_router
 from app.domains.escrow.router import router as escrow_router
 from app.domains.fraud.router import router as fraud_router
 from app.domains.matching.router import router as matching_router
 from app.domains.partners.router import router as partners_router
 from app.domains.payments.router import router as payments_router
 from app.domains.pricing.router import router as pricing_router
+from app.domains.support.router import router as support_router
 from app.domains.trips.router import router as trips_router
 from app.domains.users.router import router as users_router
 
@@ -28,6 +30,8 @@ DOMAIN_ROUTERS = [
     payments_router,
     partners_router,
     fraud_router,
+    chat_router,
+    support_router,
 ]
 
 

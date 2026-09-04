@@ -58,6 +58,20 @@ class Settings(BaseSettings):
     # dài hơn thì bản đồ trông như bị treo.
     OPS_FLEET_PUSH_SECONDS: float = 3.0
 
+    # --- Hỗ trợ khách hàng (phân định §7.5) ---
+    # Hạn phản hồi ĐẦU TIÊN theo mức ưu tiên, tính bằng phút. Quá hạn thì ticket tự leo thang
+    # lên cs_lead — con số này là cam kết vận hành, nên để ở đây cho sửa được mà không deploy.
+    SLA_FIRST_RESPONSE_MINUTES: dict[str, int] = {
+        "urgent": 2,  # an toàn, tai nạn
+        "high": 15,  # dính tiền
+        "normal": 60,
+        "low": 480,
+    }
+    # Agent tắt máy giữa ca thì ticket của họ phải quay về hàng đợi, không nằm chờ hết ngày.
+    AGENT_OFFLINE_RELEASE_MINUTES: int = 10
+    # Trần số hội thoại một agent ôm cùng lúc. Vượt trần thì phân cho người khác.
+    AGENT_DEFAULT_MAX_CHATS: int = 5
+
     # --- Phân bổ doanh thu (SPEC 4.4) ---
     DRIVER_SHARE_RATE: Decimal = Decimal("0.58")  # tài xế nhận ~58% cước (chưa gồm phụ thu đón xa)
     TAKE_RATE: Decimal = Decimal("0.38")  # take-rate nền tảng Năm 1 = 38%

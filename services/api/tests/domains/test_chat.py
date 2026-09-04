@@ -147,6 +147,8 @@ async def test_nguoi_ngoai_khong_doc_duoc_hoi_thoai(db):
 async def test_nguoi_ngoai_goi_api_thi_nhan_403_va_khong_biet_hoi_thoai_co_that_hay_khong(
     db, api_client
 ):
+    """QA-CHAT-11. Bài rà soát API bắt được chỗ này: 404 cho id không tồn tại là một câu
+    trả lời, và người dò chỉ cần đếm câu trả lời."""
     from app.core.constants import UserRole
     from app.core.security import create_access_token
 
@@ -163,9 +165,10 @@ async def test_nguoi_ngoai_goi_api_thi_nhan_403_va_khong_biet_hoi_thoai_co_that_
         f"/api/v1/chat/conversations/{uuid.uuid4()}/messages", headers=headers
     )
 
-    assert co_that.status_code == 403
-    # Hội thoại có thật trả 403, không có thật trả 404 — nhưng thông điệp giống nhau nên
-    # người dò không suy ra được gì từ nội dung.
+    # Giống nhau CẢ mã trạng thái lẫn thông điệp. Trả 403 cho hội thoại có thật và 404 cho
+    # cái không tồn tại là tự khai: người dò chỉ cần quét id rồi lọc theo mã trạng thái là
+    # biết hội thoại nào đang sống, dù không đọc được một chữ nào bên trong.
+    assert co_that.status_code == khong_co.status_code == 403
     assert co_that.json()["error"]["message"] == khong_co.json()["error"]["message"]
 
 

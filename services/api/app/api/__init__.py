@@ -56,6 +56,13 @@ AUDIENCES: dict[str, tuple[str, ...]] = {
     "my_wallet": ("driver",),
     "my_wallet_transactions": ("driver",),
     "withdraw": ("driver",),
+    # --- Chat & hỗ trợ: cùng một bề mặt cho cả hai bên của chuyến ---
+    "list_conversations": ("rider", "driver"),
+    "list_messages": ("rider", "driver"),
+    "send_message": ("rider", "driver"),
+    "mark_read": ("rider", "driver"),
+    "create_ticket": ("rider", "driver"),
+    "my_tickets": ("rider", "driver"),
     # --- Console (đã có sẵn bề mặt /ops riêng, liệt kê ở đây cho đủ bức tranh) ---
     "list_reconciliation_reports": ("ops",),
     "run_reconciliation": ("ops",),

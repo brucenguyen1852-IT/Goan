@@ -48,8 +48,7 @@ async def list_messages(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> list[MessageOut]:
-    conversation = await service.get_conversation(db, conversation_id)
-    service.assert_member(conversation, user=user)
+    conversation, _ = await service.get_member_conversation(db, conversation_id, user=user)
     rows = await service.list_messages(db, conversation, before=before, after=after, limit=limit)
     return [MessageOut.model_validate(m) for m in rows]
 
@@ -65,8 +64,7 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> MessageOut:
-    conversation = await service.get_conversation(db, conversation_id)
-    service.assert_member(conversation, user=user)
+    conversation, _ = await service.get_member_conversation(db, conversation_id, user=user)
     message, created = await service.send_message(
         db, conversation, body=body.body, sender_user=user, client_msg_id=body.client_msg_id
     )
@@ -91,8 +89,7 @@ async def mark_read(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> ConversationOut:
-    conversation = await service.get_conversation(db, conversation_id)
-    member = service.assert_member(conversation, user=user)
+    conversation, member = await service.get_member_conversation(db, conversation_id, user=user)
     await service.mark_read(db, conversation, member, body.message_id)
     out = ConversationOut.model_validate(conversation)
     out.unread_count = await service.unread_count(db, conversation, member)

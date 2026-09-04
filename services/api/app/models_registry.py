@@ -32,6 +32,12 @@ from app.domains.payments.models import (
     WalletTransaction,
 )
 from app.domains.pricing.models import PeakPeriod, PricingRule
+from app.domains.support.models import (
+    AgentPresence,
+    CannedResponse,
+    SupportTicket,
+    TicketEvent,
+)
 from app.domains.trips.models import Trip, TripEvent, TripGpsLog, TripRating
 from app.domains.users.models import DriverProfile, User
 
@@ -69,4 +75,8 @@ __all__ = [
     "DriverWallet",
     "WalletTransaction",
     "ReconciliationReport",
+    "SupportTicket",
+    "TicketEvent",
+    "CannedResponse",
+    "AgentPresence",
 ]

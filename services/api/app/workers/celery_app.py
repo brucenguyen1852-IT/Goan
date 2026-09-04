@@ -48,6 +48,16 @@ celery_app.conf.beat_schedule = {
         "task": "app.workers.tasks.close_stale_chat_conversations",
         "schedule": crontab(minute=30),
     },
+    # SLA `urgent` là 2 phút, nên quét mỗi phút: quét thưa hơn thì cam kết gắt nhất trở
+    # thành thứ không bao giờ đo được.
+    "escalate-overdue-tickets": {
+        "task": "app.workers.tasks.escalate_overdue_tickets",
+        "schedule": crontab(minute="*"),
+    },
+    "release-offline-agent-tickets": {
+        "task": "app.workers.tasks.release_offline_agent_tickets",
+        "schedule": crontab(minute="*/5"),
+    },
     "process-escrow-refunds": {
         "task": "app.workers.tasks.process_escrow_refunds",
         "schedule": crontab(hour=3, minute=0),

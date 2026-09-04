@@ -106,6 +106,26 @@ def assert_member(
     return member
 
 
+async def get_member_conversation(
+    db: AsyncSession,
+    conversation_id: uuid.UUID,
+    *,
+    user: User | None = None,
+    staff: StaffUser | None = None,
+) -> tuple[Conversation, ConversationMember]:
+    """Lấy hội thoại mà người gọi thật sự là thành viên — dùng cho bề mặt khách/tài xế.
+
+    Hội thoại KHÔNG tồn tại và hội thoại của người khác trả về **cùng một** lỗi 403 với cùng
+    một thông điệp. Trả 404 cho cái không tồn tại và 403 cho cái có thật là tự khai: người dò
+    chỉ cần quét id rồi lọc theo mã trạng thái là biết chính xác hội thoại nào đang sống, dù
+    không đọc được nội dung. Bài rà soát API bắt được đúng chỗ này.
+    """
+    conversation = await db.get(Conversation, conversation_id)
+    if conversation is None:
+        raise PermissionDeniedError("Không tìm thấy hội thoại")
+    return conversation, assert_member(conversation, user=user, staff=staff)
+
+
 async def get_or_create_trip_conversation(
     db: AsyncSession, *, trip_id: uuid.UUID, rider_id: uuid.UUID, driver_id: uuid.UUID
 ) -> Conversation:

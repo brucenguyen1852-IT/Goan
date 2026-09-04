@@ -573,6 +573,116 @@ def main():
         driver.post(f"/drivers/{driver2_id}/wallet/withdraw", json={"amount": "1000"}).status_code,
     )
 
+    # ---------- chat & hỗ trợ ----------
+    print("\n--- CHAT & HỖ TRỢ ---")
+    # Hội thoại của chuyến được mở TỰ ĐỘNG lúc ghép tài xế (P2-07), nên ở đây chỉ đọc ra —
+    # không có endpoint nào để "tạo chat", và đó là điều cần chứng minh.
+    r = rider.get("/chat/conversations")
+    check("chat", "GET", "/chat/conversations", 200, r.status_code)
+    conv = next(
+        (c for c in (r.json() if r.status_code == 200 else []) if c.get("trip_id") == trip_id),
+        None,
+    )
+    check(
+        "chat",
+        "GET",
+        "/chat/conversations (chuyến đã ghép có hội thoại)",
+        200,
+        200 if conv else 0,
+        "" if conv else "không thấy hội thoại nào gắn với chuyến vừa chạy",
+    )
+    if conv:
+        cid = conv["id"]
+        key = uuid.uuid4().hex
+        r = rider.post(
+            f"/chat/conversations/{cid}/messages",
+            json={"body": "Anh ơi em ở cổng sau nhé", "client_msg_id": key},
+        )
+        check("chat", "POST", "/chat/conversations/{id}/messages", 201, r.status_code, r.text[:70])
+        first_id = r.json().get("id") if r.status_code == 201 else None
+        # Gửi lại đúng client_msg_id: phải ra ĐÚNG tin cũ, không tạo tin thứ hai (P2-02).
+        r2 = rider.post(
+            f"/chat/conversations/{cid}/messages",
+            json={"body": "Anh ơi em ở cổng sau nhé", "client_msg_id": key},
+        )
+        check(
+            "chat",
+            "POST",
+            "/chat/conversations/{id}/messages (gửi lại, khử trùng)",
+            201,
+            r2.status_code,
+        )
+        check(
+            "chat",
+            "POST",
+            "/chat/conversations/{id}/messages (không tạo tin thứ hai)",
+            200,
+            200 if r2.status_code == 201 and r2.json().get("id") == first_id else 0,
+        )
+        r = driver.get(f"/chat/conversations/{cid}/messages")
+        check("chat", "GET", "/chat/conversations/{id}/messages", 200, r.status_code)
+        if first_id:
+            check(
+                "chat",
+                "POST",
+                "/chat/conversations/{id}/read",
+                200,
+                driver.post(
+                    f"/chat/conversations/{cid}/read", json={"message_id": first_id}
+                ).status_code,
+            )
+        # Người ngoài biết id hội thoại vẫn không đọc được: đây là tin nhắn riêng của hai người.
+        check(
+            "chat",
+            "GET",
+            "/chat/conversations/{id}/messages (người ngoài)",
+            403,
+            admin.get(f"/chat/conversations/{cid}/messages").status_code,
+        )
+    check(
+        "chat",
+        "GET",
+        "/chat/conversations/{id}/messages (không tồn tại)",
+        403,
+        rider.get(f"/chat/conversations/{uuid.uuid4()}/messages").status_code,
+        "cố tình cùng mã với 'không phải thành viên': dò id cũng là rò rỉ",
+    )
+
+    r = rider.post(
+        "/support/tickets",
+        json={
+            "subject": "Bị trừ tiền hai lần",
+            "category": "payment",
+            "body": "Em bị trừ 2 lần cho chuyến vừa rồi",
+        },
+    )
+    check("support", "POST", "/support/tickets", 201, r.status_code, r.text[:70])
+    ticket = r.json() if r.status_code == 201 else {}
+    # Loại "payment" phải tự nâng lên high và về đội finance, bất kể khách chọn gì.
+    check(
+        "support",
+        "POST",
+        "/support/tickets (tự nâng ưu tiên + đúng đội)",
+        200,
+        200 if ticket.get("priority") == "high" and ticket.get("team") == "finance" else 0,
+        f"priority={ticket.get('priority')} team={ticket.get('team')}",
+    )
+    check("support", "GET", "/support/tickets", 200, rider.get("/support/tickets").status_code)
+    check(
+        "support",
+        "GET",
+        "/ops/support/queue (token khách)",
+        403,
+        rider.get("/ops/support/queue").status_code,
+    )
+    check(
+        "support",
+        "GET",
+        "/ops/chat/search (token khách)",
+        403,
+        rider.get("/ops/chat/search").status_code,
+    )
+
     # ---------- admin ----------
     print("\n--- ADMIN ---")
     check(

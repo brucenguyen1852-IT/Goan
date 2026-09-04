@@ -6,14 +6,14 @@
 > PRD ở đây gồm 3 tài liệu trong `docs/`: kiến trúc kỹ thuật, thiết kế luồng thanh toán,
 > và phân định hệ thống.
 >
-> Cập nhật: 04/09/2026 · **308 test tự động, độ phủ 84%** · 76/76 lời gọi API rà soát đạt
+> Cập nhật: 04/09/2026 · **346 test tự động, độ phủ 84%** · 90/90 lời gọi API rà soát đạt
 
 ## Quy ước mã
 
 - `PRD-<VÙNG>-<số>` — một yêu cầu kiểm chứng được, trích từ tài liệu.
 - `QA-<VÙNG>-<số>` — một test case. Ghi trong docstring của test tương ứng.
 - Vùng: `PAY` thanh toán · `SEC` bảo mật · `TRIP` chuyến đi · `FRD` gian lận · `ESC` ký quỹ ·
-  `MATCH` ghép chuyến · `OPS` vận hành · `CHAT` hội thoại
+  `MATCH` ghép chuyến · `OPS` vận hành · `CHAT` hội thoại · `SUP` hỗ trợ khách hàng
 
 ---
 
@@ -136,14 +136,34 @@
 | PRD-CHAT-03 | Khử trùng tin nhắn theo `client_msg_id` | Phân định §7.3 | `test_chat.py` QA-CHAT-02 | ✅ |
 | PRD-CHAT-04 | Mất kết nối rồi nối lại: đồng bộ đủ tin đã lỡ | Phân định §5 | `test_chat.py` QA-CHAT-03 | ✅ |
 | PRD-CHAT-05 | Chat `trip` tự đóng sau 24 giờ | Phân định §7.1 | `test_chat.py` QA-CHAT-04 | ✅ |
-| PRD-CHAT-06 | SLA: `urgent` phản hồi đầu ≤ 2 phút, quá hạn tự escalate | Phân định §7.5 | — | ❌ |
+| PRD-CHAT-06 | SLA: `urgent` phản hồi đầu ≤ 2 phút, quá hạn tự escalate | Phân định §7.5 | `test_support.py` QA-SUP-02, QA-SUP-10 | ✅ |
 | PRD-CHAT-07 | Rủ thanh toán ngoài app bị **đánh dấu** để rà soát, nhưng tin vẫn gửi đi | Phân định §7.4 | `test_chat.py` QA-CHAT-07 | ✅ |
 | PRD-CHAT-08 | "Đang gõ" đi qua WS, không lưu DB, và chỉ tới thành viên hội thoại | Phân định §7.2 | `test_chat_ws.py` QA-CHAT-08, QA-CHAT-09 | ✅ |
 | PRD-CHAT-09 | Token hết hạn giữa lúc đang kết nối: báo `auth.expired` rồi đóng | Phân định §5 | `test_chat_ws.py` QA-CHAT-10 | ✅ |
+| PRD-CHAT-10 | Hội thoại không tồn tại và hội thoại của người khác trả **cùng một** lỗi | Phân định §7.6 | `test_chat.py` QA-CHAT-11 | ✅ |
 
 > PRD-CHAT-07 không có trong bản PRD gốc: nó là ràng buộc rút ra khi làm P2-04. Chặn tin là
 > đẩy hai bên sang Zalo, và lúc đó không còn gì để rà soát nữa — cờ mà không chặn mới giữ
 > được dấu vết.
+
+## H. Hỗ trợ khách hàng (Support Desk)
+
+| PRD | Yêu cầu | Nguồn | Test | Trạng thái |
+|---|---|---|---|---|
+| PRD-SUP-01 | Mức ưu tiên do LOẠI vấn đề quyết định, khách không tự hạ được | Phân định §7.5 | `test_support.py` QA-SUP-01 | ✅ |
+| PRD-SUP-02 | Ticket có mã ngắn đọc được qua điện thoại, kèm hội thoại `support` | Phân định §7.2 | `test_support.py` QA-SUP-03 | ✅ |
+| PRD-SUP-03 | Phân phối tự động theo `agent_presence`: đúng đội, còn slot | Phân định §7.5 | `test_support.py` QA-SUP-04, QA-SUP-05 | ✅ |
+| PRD-SUP-04 | Ưu tiên agent đã xử lý ticket cũ của chính khách này | Phân định §7.5 | `test_support.py` QA-SUP-06 | ✅ |
+| PRD-SUP-05 | SLA đo phản hồi **đầu tiên**, ghi đúng một lần | Phân định §7.5 | `test_support.py` QA-SUP-07 | ✅ |
+| PRD-SUP-06 | Mỗi bước leo thang / chuyển tay ghi `ticket_events` kèm lý do | Phân định §7.5 | `test_support.py` QA-SUP-08 | ✅ |
+| PRD-SUP-07 | Reopen đếm được, không mở ticket mới thay thế | Phân định §7.5 | `test_support.py` QA-SUP-09 | ✅ |
+| PRD-SUP-08 | Agent `offline` quá 10 phút thì ticket tự về hàng đợi | Phân định §7.5 | `test_support.py` QA-SUP-11 | ✅ |
+| PRD-SUP-09 | Hàng đợi sắp theo hạn SLA, không theo giờ tạo | Phân định §7.5 | `test_support.py` QA-SUP-12 | ✅ |
+| PRD-SUP-10 | Mẫu trả lời theo đội, gọi bằng gõ tắt `/hoantien` | Phân định §7.5 | `test_support.py` QA-SUP-13 | ✅ |
+| PRD-SUP-11 | `read_own` không mở được ticket và chat của người khác | Phân định §2.3 | `test_support.py` QA-SUP-14, QA-SUP-16, QA-SUP-17 | ✅ |
+| PRD-SUP-12 | CSKH vào hội thoại 3 bên từ Console, hai bên đều thấy | Phân định §7.4 | `test_support.py` QA-SUP-18 | ✅ |
+| PRD-SUP-13 | Giờ ngoài ca: chỉ trực `urgent`, phần còn lại xếp hàng ca sau | Phân định §7.5 | — | ❌ |
+| PRD-SUP-14 | CSAT sau khi đóng ticket | Phân định §7.5 | — | ❌ |
 
 ---
 
@@ -157,8 +177,9 @@
 | Chống gian lận | 7 | 6 | 0 | 1 |
 | Bảo mật | 13 | 10 | 0 | 3 |
 | Vận hành | 6 | 3 | 2 | 1 |
-| Chat | 9 | 8 | 0 | 1 |
-| **Tổng** | **72** | **58 (81%)** | **2** | **12** |
+| Chat | 10 | 10 | 0 | 0 |
+| Hỗ trợ | 14 | 12 | 0 | 2 |
+| **Tổng** | **87** | **74 (85%)** | **2** | **11** |
 
 **Hai yêu cầu còn thiếu test** — code đã có nhưng chưa chứng minh được:
 
@@ -167,7 +188,7 @@
 | PRD-OPS-04 | "Chỉ ghi thêm, không sửa không xoá" phải chặn ở tầng DB (thu hồi quyền UPDATE/DELETE trên `audit_logs`), không phải ở tầng ứng dụng | Làm cùng lúc với dựng staging (P0) |
 | PRD-OPS-06 | Cần cài `sentry-sdk` và một máy chủ thu nhận giả để kiểm chứng "không gửi kèm PII" | Làm khi bật Sentry thật trên staging (P0) |
 
-**Mười hai yêu cầu "chưa làm" nằm ở P2, P5** — đã có trong Backlog, không phải nợ kỹ thuật.
+**Mười một yêu cầu "chưa làm" nằm ở P2, P5** — đã có trong Backlog, không phải nợ kỹ thuật.
 
 | PRD-ARCH-01 | Bề mặt API tách theo 5 nhóm đối tượng, đường dẫn cũ vẫn chạy (deprecated) | Phân định §3.1 | `test_api_audiences.py` QA-API-01…06 | ✅ |
 

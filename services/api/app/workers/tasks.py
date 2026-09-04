@@ -82,3 +82,25 @@ def close_stale_chat_conversations() -> int:
         return await chat_service.close_stale_trip_conversations(db)
 
     return _run(run)
+
+
+@celery_app.task(name="app.workers.tasks.escalate_overdue_tickets")
+def escalate_overdue_tickets() -> int:
+    """Ticket quá hạn phản hồi đầu thì tự leo thang lên cs_lead (P2-08)."""
+    from app.domains.support import service as support_service
+
+    async def run(db):
+        return await support_service.escalate_overdue(db)
+
+    return _run(run)
+
+
+@celery_app.task(name="app.workers.tasks.release_offline_agent_tickets")
+def release_offline_agent_tickets() -> int:
+    """Agent tắt máy giữa ca thì ticket của họ quay về hàng đợi (P2-08, bàn giao ca)."""
+    from app.domains.support import service as support_service
+
+    async def run(db):
+        return await support_service.release_offline_agents(db)
+
+    return _run(run)

@@ -349,7 +349,7 @@
     "path": "/trips/{id}/rate",
     "expected": 200,
     "got": 200,
-    "note": "trung bình 5.00 / 1 lượt"
+    "note": "trung bình 5.00 / 3 lượt"
   },
   {
     "group": "trips",
@@ -499,6 +499,118 @@
     "group": "payments",
     "method": "POST",
     "path": "/drivers/{id}/wallet/withdraw (của người khác)",
+    "expected": 403,
+    "got": 403,
+    "note": ""
+  },
+  {
+    "group": "chat",
+    "method": "GET",
+    "path": "/chat/conversations",
+    "expected": 200,
+    "got": 200,
+    "note": ""
+  },
+  {
+    "group": "chat",
+    "method": "GET",
+    "path": "/chat/conversations (chuyến đã ghép có hội thoại)",
+    "expected": 200,
+    "got": 200,
+    "note": ""
+  },
+  {
+    "group": "chat",
+    "method": "POST",
+    "path": "/chat/conversations/{id}/messages",
+    "expected": 201,
+    "got": 201,
+    "note": "{\"id\":\"a8cee1c4-3630-4f7f-bdf9-a678307a2856\",\"conversation_id\":\"6d4284"
+  },
+  {
+    "group": "chat",
+    "method": "POST",
+    "path": "/chat/conversations/{id}/messages (gửi lại, khử trùng)",
+    "expected": 201,
+    "got": 201,
+    "note": ""
+  },
+  {
+    "group": "chat",
+    "method": "POST",
+    "path": "/chat/conversations/{id}/messages (không tạo tin thứ hai)",
+    "expected": 200,
+    "got": 200,
+    "note": ""
+  },
+  {
+    "group": "chat",
+    "method": "GET",
+    "path": "/chat/conversations/{id}/messages",
+    "expected": 200,
+    "got": 200,
+    "note": ""
+  },
+  {
+    "group": "chat",
+    "method": "POST",
+    "path": "/chat/conversations/{id}/read",
+    "expected": 200,
+    "got": 200,
+    "note": ""
+  },
+  {
+    "group": "chat",
+    "method": "GET",
+    "path": "/chat/conversations/{id}/messages (người ngoài)",
+    "expected": 403,
+    "got": 403,
+    "note": ""
+  },
+  {
+    "group": "chat",
+    "method": "GET",
+    "path": "/chat/conversations/{id}/messages (không tồn tại)",
+    "expected": 403,
+    "got": 403,
+    "note": "cố tình cùng mã với 'không phải thành viên': dò id cũng là rò rỉ"
+  },
+  {
+    "group": "support",
+    "method": "POST",
+    "path": "/support/tickets",
+    "expected": 201,
+    "got": 201,
+    "note": "{\"id\":\"37a93318-2183-4a16-bce5-f2982f681e0f\",\"code\":\"GA-260904-0002\",\""
+  },
+  {
+    "group": "support",
+    "method": "POST",
+    "path": "/support/tickets (tự nâng ưu tiên + đúng đội)",
+    "expected": 200,
+    "got": 200,
+    "note": "priority=high team=finance"
+  },
+  {
+    "group": "support",
+    "method": "GET",
+    "path": "/support/tickets",
+    "expected": 200,
+    "got": 200,
+    "note": ""
+  },
+  {
+    "group": "support",
+    "method": "GET",
+    "path": "/ops/support/queue (token khách)",
+    "expected": 403,
+    "got": 403,
+    "note": ""
+  },
+  {
+    "group": "support",
+    "method": "GET",
+    "path": "/ops/chat/search (token khách)",
     "expected": 403,
     "got": 403,
     "note": ""

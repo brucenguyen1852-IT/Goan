@@ -1,6 +1,16 @@
 {
   "components": {
     "schemas": {
+      "AgentStatus": {
+        "enum": [
+          "available",
+          "busy",
+          "away",
+          "offline"
+        ],
+        "title": "AgentStatus",
+        "type": "string"
+      },
       "ApprovalCreateRequest": {
         "properties": {
           "amount": {
@@ -487,6 +497,82 @@
         "title": "CancelTripRequest",
         "type": "object"
       },
+      "CannedResponseOut": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "shortcut": {
+            "title": "Shortcut",
+            "type": "string"
+          },
+          "team": {
+            "$ref": "#/components/schemas/TicketTeam"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "team",
+          "title",
+          "body",
+          "shortcut",
+          "is_active"
+        ],
+        "title": "CannedResponseOut",
+        "type": "object"
+      },
+      "CannedResponseRequest": {
+        "properties": {
+          "body": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "is_active": {
+            "default": true,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "shortcut": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Shortcut",
+            "type": "string"
+          },
+          "team": {
+            "$ref": "#/components/schemas/TicketTeam",
+            "default": "cs"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "body",
+          "shortcut"
+        ],
+        "title": "CannedResponseRequest",
+        "type": "object"
+      },
       "CompleteTripRequest": {
         "properties": {
           "idempotency_key": {
@@ -657,6 +743,53 @@
           "lng"
         ],
         "title": "Coordinate",
+        "type": "object"
+      },
+      "CreateTicketRequest": {
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "category": {
+            "$ref": "#/components/schemas/TicketCategory",
+            "default": "other"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/TicketPriority",
+            "default": "normal"
+          },
+          "subject": {
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Subject",
+            "type": "string"
+          },
+          "trip_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trip Id"
+          }
+        },
+        "required": [
+          "subject"
+        ],
+        "title": "CreateTicketRequest",
         "type": "object"
       },
       "DecisionRequest": {
@@ -2122,6 +2255,79 @@
         "title": "PermissionOut",
         "type": "object"
       },
+      "PresenceOut": {
+        "properties": {
+          "active_chats": {
+            "title": "Active Chats",
+            "type": "integer"
+          },
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "max_chats": {
+            "title": "Max Chats",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AgentStatus"
+          },
+          "team": {
+            "$ref": "#/components/schemas/TicketTeam"
+          }
+        },
+        "required": [
+          "agent_id",
+          "team",
+          "status",
+          "active_chats",
+          "max_chats"
+        ],
+        "title": "PresenceOut",
+        "type": "object"
+      },
+      "PresenceRequest": {
+        "properties": {
+          "max_chats": {
+            "anyOf": [
+              {
+                "maximum": 50.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Chats"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AgentStatus"
+          },
+          "team": {
+            "$ref": "#/components/schemas/TicketTeam",
+            "default": "cs"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "PresenceRequest",
+        "type": "object"
+      },
       "RateTripRequest": {
         "properties": {
           "comment": {
@@ -2276,6 +2482,36 @@
           "scheduled_payout_date"
         ],
         "title": "RefundRequestResponse",
+        "type": "object"
+      },
+      "ReopenRequest": {
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ReopenRequest",
+        "type": "object"
+      },
+      "ResolveRequest": {
+        "properties": {
+          "note": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "ResolveRequest",
         "type": "object"
       },
       "RevealPiiRequest": {
@@ -2732,6 +2968,258 @@
         "title": "StaffTokens",
         "type": "object"
       },
+      "SubjectType": {
+        "enum": [
+          "rider",
+          "driver"
+        ],
+        "title": "SubjectType",
+        "type": "string"
+      },
+      "TicketCategory": {
+        "enum": [
+          "payment",
+          "fraud",
+          "safety",
+          "app_issue",
+          "driver_conduct",
+          "rider_conduct",
+          "other"
+        ],
+        "title": "TicketCategory",
+        "type": "string"
+      },
+      "TicketEventOut": {
+        "properties": {
+          "actor_staff_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Staff Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_type": {
+            "$ref": "#/components/schemas/TicketEventType"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          }
+        },
+        "required": [
+          "id",
+          "event_type",
+          "created_at"
+        ],
+        "title": "TicketEventOut",
+        "type": "object"
+      },
+      "TicketEventType": {
+        "enum": [
+          "created",
+          "assigned",
+          "first_response",
+          "transferred",
+          "escalated",
+          "resolved",
+          "reopened",
+          "released"
+        ],
+        "title": "TicketEventType",
+        "type": "string"
+      },
+      "TicketOut": {
+        "properties": {
+          "assigned_agent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Agent Id"
+          },
+          "category": {
+            "$ref": "#/components/schemas/TicketCategory"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "first_response_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Response At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/TicketPriority"
+          },
+          "reopened_count": {
+            "title": "Reopened Count",
+            "type": "integer"
+          },
+          "resolution_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Note"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "sla_due_at": {
+            "format": "date-time",
+            "title": "Sla Due At",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TicketStatus"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "subject_type": {
+            "$ref": "#/components/schemas/SubjectType"
+          },
+          "team": {
+            "$ref": "#/components/schemas/TicketTeam"
+          },
+          "trip_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trip Id"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "subject",
+          "subject_type",
+          "subject_id",
+          "category",
+          "priority",
+          "status",
+          "team",
+          "sla_due_at",
+          "reopened_count",
+          "created_at"
+        ],
+        "title": "TicketOut",
+        "type": "object"
+      },
+      "TicketPriority": {
+        "enum": [
+          "low",
+          "normal",
+          "high",
+          "urgent"
+        ],
+        "title": "TicketPriority",
+        "type": "string"
+      },
+      "TicketStatus": {
+        "enum": [
+          "new",
+          "assigned",
+          "waiting_customer",
+          "escalated",
+          "resolved",
+          "closed"
+        ],
+        "title": "TicketStatus",
+        "type": "string"
+      },
+      "TicketTeam": {
+        "enum": [
+          "cs",
+          "risk",
+          "finance",
+          "driver_ops"
+        ],
+        "title": "TicketTeam",
+        "type": "string"
+      },
       "TimeBand": {
         "enum": [
           "normal",
@@ -2762,6 +3250,43 @@
           "refresh_token"
         ],
         "title": "TokenPair",
+        "type": "object"
+      },
+      "TransferRequest": {
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          },
+          "to_agent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Agent Id"
+          },
+          "to_team": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TicketTeam"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "TransferRequest",
         "type": "object"
       },
       "TripActorType": {
@@ -4006,6 +4531,7 @@
     },
     "/api/v1/chat/conversations": {
       "get": {
+        "deprecated": true,
         "operationId": "list_conversations_api_v1_chat_conversations_get",
         "responses": {
           "200": {
@@ -4036,6 +4562,7 @@
     },
     "/api/v1/chat/conversations/{conversation_id}/messages": {
       "get": {
+        "deprecated": true,
         "operationId": "list_messages_api_v1_chat_conversations__conversation_id__messages_get",
         "parameters": [
           {
@@ -4136,6 +4663,7 @@
         ]
       },
       "post": {
+        "deprecated": true,
         "operationId": "send_message_api_v1_chat_conversations__conversation_id__messages_post",
         "parameters": [
           {
@@ -4194,6 +4722,7 @@
     },
     "/api/v1/chat/conversations/{conversation_id}/read": {
       "post": {
+        "deprecated": true,
         "operationId": "mark_read_api_v1_chat_conversations__conversation_id__read_post",
         "parameters": [
           {
@@ -4247,6 +4776,252 @@
         "summary": "Mark Read",
         "tags": [
           "chat"
+        ]
+      }
+    },
+    "/api/v1/driver/chat/conversations": {
+      "get": {
+        "operationId": "list_conversations_api_v1_driver_chat_conversations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationOut"
+                  },
+                  "title": "Response List Conversations Api V1 Driver Chat Conversations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Conversations",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/chat/conversations/{conversation_id}/messages": {
+      "get": {
+        "operationId": "list_messages_api_v1_driver_chat_conversations__conversation_id__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Cuộn ngược xem tin cũ",
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cuộn ngược xem tin cũ",
+              "title": "Before"
+            }
+          },
+          {
+            "description": "Đồng bộ bù sau khi mất kết nối: mốc tin cuối app đang có",
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Đồng bộ bù sau khi mất kết nối: mốc tin cuối app đang có",
+              "title": "After"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MessageOut"
+                  },
+                  "title": "Response List Messages Api V1 Driver Chat Conversations  Conversation Id  Messages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Messages",
+        "tags": [
+          "driver"
+        ]
+      },
+      "post": {
+        "operationId": "send_message_api_v1_driver_chat_conversations__conversation_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send Message",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/chat/conversations/{conversation_id}/read": {
+      "post": {
+        "operationId": "mark_read_api_v1_driver_chat_conversations__conversation_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkReadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mark Read",
+        "tags": [
+          "driver"
         ]
       }
     },
@@ -4738,6 +5513,82 @@
           }
         ],
         "summary": "Accept Trip",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/support/tickets": {
+      "get": {
+        "description": "Ticket của chính người đang đăng nhập — việc đang mở lên trước.",
+        "operationId": "my_tickets_api_v1_driver_support_tickets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TicketOut"
+                  },
+                  "title": "Response My Tickets Api V1 Driver Support Tickets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Tickets",
+        "tags": [
+          "driver"
+        ]
+      },
+      "post": {
+        "description": "Mở ticket. Hội thoại `support` đi kèm được tạo luôn, không cần gọi thêm API nào.",
+        "operationId": "create_ticket_api_v1_driver_support_tickets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTicketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Ticket",
         "tags": [
           "driver"
         ]
@@ -6205,6 +7056,257 @@
         ]
       }
     },
+    "/api/v1/ops/chat/conversations/{conversation_id}/join": {
+      "post": {
+        "description": "Tham gia hội thoại 3 bên. Cả khách và tài xế đều thấy tin hệ thống báo có CSKH vào.",
+        "operationId": "join_conversation_api_v1_ops_chat_conversations__conversation_id__join_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Join Conversation",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
+    "/api/v1/ops/chat/conversations/{conversation_id}/leave": {
+      "post": {
+        "operationId": "leave_conversation_api_v1_ops_chat_conversations__conversation_id__leave_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Leave Conversation",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
+    "/api/v1/ops/chat/conversations/{conversation_id}/messages": {
+      "get": {
+        "description": "Đọc nội dung một hội thoại từ Console.\n\nAgent chỉ có `read_own` vẫn đọc được hội thoại mình đang tham gia — nhưng không đọc được\nhội thoại của người khác, đó là ranh giới giữa \"làm việc\" và \"tò mò\".",
+        "operationId": "read_conversation_api_v1_ops_chat_conversations__conversation_id__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MessageOut"
+                  },
+                  "title": "Response Read Conversation Api V1 Ops Chat Conversations  Conversation Id  Messages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Conversation",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
+    "/api/v1/ops/chat/search": {
+      "get": {
+        "description": "Tra lịch sử chat phục vụ khiếu nại (P2-18).\n\nĐòi `read_all` chứ không phải `read_own`: đây là đọc hội thoại của người khác, và mỗi lần\ngọi đều nằm trong audit log qua middleware.",
+        "operationId": "search_conversations_api_v1_ops_chat_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "trip_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trip Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationOut"
+                  },
+                  "title": "Response Search Conversations Api V1 Ops Chat Search Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Search Conversations",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
     "/api/v1/ops/drivers": {
       "get": {
         "operationId": "list_drivers_api_v1_ops_drivers_get",
@@ -7356,6 +8458,578 @@
         ]
       }
     },
+    "/api/v1/ops/support/canned-responses": {
+      "get": {
+        "operationId": "list_canned_api_v1_ops_support_canned_responses_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TicketTeam"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CannedResponseOut"
+                  },
+                  "title": "Response List Canned Api V1 Ops Support Canned Responses Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Canned",
+        "tags": [
+          "ops-support"
+        ]
+      },
+      "put": {
+        "description": "Sửa mẫu là việc của trưởng nhóm: một câu trả lời sai gửi cho hàng nghìn khách.",
+        "operationId": "upsert_canned_api_v1_ops_support_canned_responses_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CannedResponseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CannedResponseOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upsert Canned",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
+    "/api/v1/ops/support/presence": {
+      "post": {
+        "description": "Agent bật/tắt trực. Cũng là nhịp \"tôi còn sống\" cho job bàn giao ca.",
+        "operationId": "set_presence_api_v1_ops_support_presence_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresenceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Presence",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
+    "/api/v1/ops/support/queue": {
+      "get": {
+        "description": "Hàng đợi CSKH, sắp theo hạn SLA gấp nhất.\n\nAgent chỉ có quyền `read_own` thì luôn nhận về đúng việc của mình, kể cả khi họ tự gọi API\nvới `mine=false` — ẩn nút trên giao diện không phải là phân quyền.",
+        "operationId": "support_queue_api_v1_ops_support_queue_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TicketTeam"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TicketStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Chỉ ticket được phân công cho tôi",
+            "in": "query",
+            "name": "mine",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Chỉ ticket được phân công cho tôi",
+              "title": "Mine",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TicketOut"
+                  },
+                  "title": "Response Support Queue Api V1 Ops Support Queue Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Support Queue",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
+    "/api/v1/ops/support/tickets/{ticket_id}": {
+      "get": {
+        "operationId": "get_ticket_api_v1_ops_support_tickets__ticket_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Ticket",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
+    "/api/v1/ops/support/tickets/{ticket_id}/claim": {
+      "post": {
+        "operationId": "claim_ticket_api_v1_ops_support_tickets__ticket_id__claim_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Claim Ticket",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
+    "/api/v1/ops/support/tickets/{ticket_id}/events": {
+      "get": {
+        "description": "Dấu vết từng bước xử lý — câu trả lời cho \"vì sao ticket này nằm ba ngày\".",
+        "operationId": "ticket_events_api_v1_ops_support_tickets__ticket_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TicketEventOut"
+                  },
+                  "title": "Response Ticket Events Api V1 Ops Support Tickets  Ticket Id  Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ticket Events",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
+    "/api/v1/ops/support/tickets/{ticket_id}/reopen": {
+      "post": {
+        "operationId": "reopen_ticket_api_v1_ops_support_tickets__ticket_id__reopen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReopenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reopen Ticket",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
+    "/api/v1/ops/support/tickets/{ticket_id}/resolve": {
+      "post": {
+        "operationId": "resolve_ticket_api_v1_ops_support_tickets__ticket_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Resolve Ticket",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
+    "/api/v1/ops/support/tickets/{ticket_id}/transfer": {
+      "post": {
+        "operationId": "transfer_ticket_api_v1_ops_support_tickets__ticket_id__transfer_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Transfer Ticket",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
     "/api/v1/ops/trips": {
       "get": {
         "description": "Phân trang bằng con trỏ thời gian: bảng chuyến chỉ lớn dần, OFFSET sẽ chậm dần.",
@@ -8136,6 +9810,252 @@
         ]
       }
     },
+    "/api/v1/rider/chat/conversations": {
+      "get": {
+        "operationId": "list_conversations_api_v1_rider_chat_conversations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationOut"
+                  },
+                  "title": "Response List Conversations Api V1 Rider Chat Conversations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Conversations",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
+    "/api/v1/rider/chat/conversations/{conversation_id}/messages": {
+      "get": {
+        "operationId": "list_messages_api_v1_rider_chat_conversations__conversation_id__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Cuộn ngược xem tin cũ",
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cuộn ngược xem tin cũ",
+              "title": "Before"
+            }
+          },
+          {
+            "description": "Đồng bộ bù sau khi mất kết nối: mốc tin cuối app đang có",
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Đồng bộ bù sau khi mất kết nối: mốc tin cuối app đang có",
+              "title": "After"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MessageOut"
+                  },
+                  "title": "Response List Messages Api V1 Rider Chat Conversations  Conversation Id  Messages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Messages",
+        "tags": [
+          "rider"
+        ]
+      },
+      "post": {
+        "operationId": "send_message_api_v1_rider_chat_conversations__conversation_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send Message",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
+    "/api/v1/rider/chat/conversations/{conversation_id}/read": {
+      "post": {
+        "operationId": "mark_read_api_v1_rider_chat_conversations__conversation_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkReadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mark Read",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
     "/api/v1/rider/pricing/estimate": {
       "post": {
         "description": "Trả giá ước tính TRƯỚC khi rider xác nhận đặt (SPEC 4.5).",
@@ -8173,6 +10093,82 @@
           }
         },
         "summary": "Estimate Fare",
+        "tags": [
+          "rider"
+        ]
+      }
+    },
+    "/api/v1/rider/support/tickets": {
+      "get": {
+        "description": "Ticket của chính người đang đăng nhập — việc đang mở lên trước.",
+        "operationId": "my_tickets_api_v1_rider_support_tickets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TicketOut"
+                  },
+                  "title": "Response My Tickets Api V1 Rider Support Tickets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Tickets",
+        "tags": [
+          "rider"
+        ]
+      },
+      "post": {
+        "description": "Mở ticket. Hội thoại `support` đi kèm được tạo luôn, không cần gọi thêm API nào.",
+        "operationId": "create_ticket_api_v1_rider_support_tickets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTicketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Ticket",
         "tags": [
           "rider"
         ]
@@ -8697,6 +10693,84 @@
         "summary": "Me",
         "tags": [
           "rider"
+        ]
+      }
+    },
+    "/api/v1/support/tickets": {
+      "get": {
+        "deprecated": true,
+        "description": "Ticket của chính người đang đăng nhập — việc đang mở lên trước.",
+        "operationId": "my_tickets_api_v1_support_tickets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TicketOut"
+                  },
+                  "title": "Response My Tickets Api V1 Support Tickets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Tickets",
+        "tags": [
+          "support"
+        ]
+      },
+      "post": {
+        "deprecated": true,
+        "description": "Mở ticket. Hội thoại `support` đi kèm được tạo luôn, không cần gọi thêm API nào.",
+        "operationId": "create_ticket_api_v1_support_tickets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTicketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Ticket",
+        "tags": [
+          "support"
         ]
       }
     },
