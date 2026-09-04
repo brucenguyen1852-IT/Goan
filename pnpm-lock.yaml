@@ -129,6 +129,15 @@ importers:
         specifier: ^5.5.4
         version: 5.9.3
 
+  packages/realtime-client:
+    devDependencies:
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(jsdom@25.0.1)
+
   packages/ui:
     devDependencies:
       '@storybook/react':

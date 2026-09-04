@@ -6,7 +6,7 @@
 > PRD ở đây gồm 3 tài liệu trong `docs/`: kiến trúc kỹ thuật, thiết kế luồng thanh toán,
 > và phân định hệ thống.
 >
-> Cập nhật: 04/09/2026 · **374 test tự động, độ phủ 84%** · 98/98 lời gọi API rà soát đạt
+> Cập nhật: 04/09/2026 · **381 test backend + 32 test frontend, độ phủ 84%** · 98/98 lời gọi API rà soát đạt
 
 ## Quy ước mã
 
@@ -170,6 +170,10 @@
 | PRD-SUP-11 | `read_own` không mở được ticket và chat của người khác | Phân định §2.3 | `test_support.py` QA-SUP-14, QA-SUP-16, QA-SUP-17 | ✅ |
 | PRD-SUP-12 | CSKH vào hội thoại 3 bên từ Console, hai bên đều thấy | Phân định §7.4 | `test_support.py` QA-SUP-18 | ✅ |
 | PRD-SUP-13 | Giờ ngoài ca: chỉ trực `urgent`, phần còn lại xếp hàng ca sau | Phân định §7.5 | — | ❌ |
+| PRD-SUP-15 | Agent xử lý trọn một ticket **không rời màn hình** | Phân định §2.2 | `support-desk.test.tsx` | ✅ |
+| PRD-SUP-16 | Một thao tác "gửi trả lời" đóng luôn đồng hồ SLA | Phân định §7.5 | `test_support.py` QA-SUP-22 · `support-desk.test.tsx` | ✅ |
+| PRD-SUP-17 | Bảng SLA: chỉ số chưa có số liệu hiện "—", không phải 0 | Phân định §7.5 | `test_support.py` QA-SUP-19…21 · `support-desk.test.tsx` | ✅ |
+| PRD-SUP-18 | Client realtime nối lại lùi dần, xếp hàng khi đứt, chờ ack | Phân định §5 | `packages/realtime-client` `client.test.ts` | ✅ |
 | PRD-SUP-14 | CSAT sau khi đóng ticket | Phân định §7.5 | — | ❌ |
 
 ---
@@ -185,8 +189,8 @@
 | Bảo mật | 13 | 10 | 0 | 3 |
 | Vận hành | 6 | 3 | 2 | 1 |
 | Chat | 17 | 17 | 0 | 0 |
-| Hỗ trợ | 14 | 12 | 0 | 2 |
-| **Tổng** | **94** | **81 (86%)** | **2** | **11** |
+| Hỗ trợ | 18 | 16 | 0 | 2 |
+| **Tổng** | **98** | **85 (87%)** | **2** | **11** |
 
 **Hai yêu cầu còn thiếu test** — code đã có nhưng chưa chứng minh được:
 

@@ -604,3 +604,135 @@ def assert_can_read(ticket: SupportTicket, staff: StaffUser, *, read_all: bool) 
     if read_all or ticket.assigned_agent_id == staff.id:
         return
     raise PermissionDeniedError("Bạn không được phân công ticket này")
+
+
+# --- Bảng SLA và hiệu suất agent (P2-19) ----------------------------------------------
+
+
+async def performance(
+    db: AsyncSession, *, since: datetime | None = None, now: datetime | None = None
+) -> dict:
+    """Bốn chỉ số ở tài liệu phân định §7.5: phản hồi đầu, thời gian xử lý, reopen, đạt SLA.
+
+    Tính trên ticket ĐÃ kết luận cho hai chỉ số thời gian, nhưng đếm quá hạn trên cả ticket
+    còn mở: một ticket urgent nằm 3 tiếng chưa ai đụng vào là thứ bảng này phải nói ra ngay,
+    chứ không phải im lặng cho tới lúc nó được đóng.
+    """
+    moment = now or datetime.now(timezone.utc)
+    tu = since or (moment - timedelta(days=30))
+
+    rows = list(
+        (await db.execute(select(SupportTicket).where(SupportTicket.created_at >= tu)))
+        .scalars()
+        .all()
+    )
+
+    def _aware(moc: datetime | None) -> datetime | None:
+        if moc is None:
+            return None
+        return moc if moc.tzinfo is not None else moc.replace(tzinfo=timezone.utc)
+
+    theo_agent: dict[str, dict] = {}
+    tong = {
+        "tickets": len(rows),
+        "dang_mo": 0,
+        "qua_han_chua_phan_hoi": 0,
+        "dat_sla": 0,
+        "co_moc_phan_hoi": 0,
+        "reopen": 0,
+    }
+    tong_phan_hoi: list[float] = []
+    tong_xu_ly: list[float] = []
+
+    for ticket in rows:
+        tao = _aware(ticket.created_at)
+        han = _aware(ticket.sla_due_at)
+        dau = _aware(ticket.first_response_at)
+        xong = _aware(ticket.resolved_at)
+
+        if ticket.status in OPEN_TICKET_STATUSES:
+            tong["dang_mo"] += 1
+            if dau is None and han is not None and han <= moment:
+                tong["qua_han_chua_phan_hoi"] += 1
+        if ticket.reopened_count:
+            tong["reopen"] += 1
+        if dau is not None:
+            tong["co_moc_phan_hoi"] += 1
+            if han is not None and dau <= han:
+                tong["dat_sla"] += 1
+            if tao is not None:
+                tong_phan_hoi.append((dau - tao).total_seconds() / 60)
+        if xong is not None and tao is not None:
+            tong_xu_ly.append((xong - tao).total_seconds() / 60)
+
+        khoa = str(ticket.assigned_agent_id) if ticket.assigned_agent_id else "chua_phan_cong"
+        muc = theo_agent.setdefault(
+            khoa,
+            {
+                "agent_id": khoa,
+                "tickets": 0,
+                "dang_mo": 0,
+                "da_ket_luan": 0,
+                "reopen": 0,
+                "dat_sla": 0,
+                "co_moc_phan_hoi": 0,
+                "_phan_hoi": [],
+                "_xu_ly": [],
+            },
+        )
+        muc["tickets"] += 1
+        if ticket.status in OPEN_TICKET_STATUSES:
+            muc["dang_mo"] += 1
+        if ticket.status in CLOSED_TICKET_STATUSES:
+            muc["da_ket_luan"] += 1
+        if ticket.reopened_count:
+            muc["reopen"] += 1
+        if dau is not None:
+            muc["co_moc_phan_hoi"] += 1
+            if han is not None and dau <= han:
+                muc["dat_sla"] += 1
+            if tao is not None:
+                muc["_phan_hoi"].append((dau - tao).total_seconds() / 60)
+        if xong is not None and tao is not None:
+            muc["_xu_ly"].append((xong - tao).total_seconds() / 60)
+
+    def _tb(xs: list[float]) -> float | None:
+        # Rỗng trả về None chứ KHÔNG phải 0: "chưa có số liệu" và "phản hồi tức thì" là hai
+        # chuyện khác nhau, và hiển thị 0 phút cho cái đầu là nói dối bằng biểu đồ.
+        return round(sum(xs) / len(xs), 1) if xs else None
+
+    agents = []
+    for muc in theo_agent.values():
+        agents.append(
+            {
+                "agent_id": muc["agent_id"],
+                "tickets": muc["tickets"],
+                "dang_mo": muc["dang_mo"],
+                "da_ket_luan": muc["da_ket_luan"],
+                "phan_hoi_dau_phut": _tb(muc["_phan_hoi"]),
+                "xu_ly_phut": _tb(muc["_xu_ly"]),
+                "ty_le_reopen": (
+                    round(muc["reopen"] / muc["tickets"], 3) if muc["tickets"] else 0.0
+                ),
+                "ty_le_dat_sla": (
+                    round(muc["dat_sla"] / muc["co_moc_phan_hoi"], 3)
+                    if muc["co_moc_phan_hoi"]
+                    else None
+                ),
+            }
+        )
+    agents.sort(key=lambda a: (-a["tickets"], a["agent_id"]))
+
+    return {
+        "tu_ngay": tu,
+        "tong_ticket": tong["tickets"],
+        "dang_mo": tong["dang_mo"],
+        "qua_han_chua_phan_hoi": tong["qua_han_chua_phan_hoi"],
+        "phan_hoi_dau_phut": _tb(tong_phan_hoi),
+        "xu_ly_phut": _tb(tong_xu_ly),
+        "ty_le_reopen": (round(tong["reopen"] / tong["tickets"], 3) if tong["tickets"] else 0.0),
+        "ty_le_dat_sla": (
+            round(tong["dat_sla"] / tong["co_moc_phan_hoi"], 3) if tong["co_moc_phan_hoi"] else None
+        ),
+        "agents": agents,
+    }

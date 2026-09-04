@@ -3,11 +3,14 @@ import { useAuth } from "@/auth/useAuth";
 import { Button } from "@goan/ui";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import { AuditPage } from "@/pages/AuditPage";
+import { ChatHistoryPage } from "@/pages/ChatHistoryPage";
 import { DriversPage } from "@/pages/DriversPage";
 import { FleetPage } from "@/pages/FleetPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { RolesPage } from "@/pages/RolesPage";
 import { StaffPage } from "@/pages/StaffPage";
+import { SupportPage } from "@/pages/SupportPage";
+import { SupportStatsPage } from "@/pages/SupportStatsPage";
 import { TripsPage } from "@/pages/TripsPage";
 
 /** Menu dựng theo quyền: mỗi mục chỉ hiện khi người đăng nhập có quyền tương ứng. */
@@ -15,6 +18,24 @@ const MENU = [
   { to: "/fleet", label: "Live Ops", permission: "ops:fleet:read", element: <FleetPage /> },
   { to: "/drivers", label: "Tài xế", permission: "driver:profile:read", element: <DriversPage /> },
   { to: "/trips", label: "Chuyến đi", permission: "trip:trip:read_all", element: <TripsPage /> },
+  {
+    to: "/support",
+    label: "Hỗ trợ",
+    permission: "support:ticket:write",
+    element: <SupportPage />,
+  },
+  {
+    to: "/chat-history",
+    label: "Lịch sử chat",
+    permission: "support:conversation:read_all",
+    element: <ChatHistoryPage />,
+  },
+  {
+    to: "/support-stats",
+    label: "SLA CSKH",
+    permission: "support:conversation:read_all",
+    element: <SupportStatsPage />,
+  },
   { to: "/approvals", label: "Chờ duyệt", permission: null, element: <ApprovalsPage /> },
   { to: "/staff", label: "Nhân sự", permission: "iam:staff:read", element: <StaffPage /> },
   { to: "/roles", label: "Vai trò", permission: "iam:role:read", element: <RolesPage /> },

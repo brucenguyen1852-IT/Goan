@@ -1,6 +1,72 @@
 {
   "components": {
     "schemas": {
+      "AgentPerformanceOut": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "da_ket_luan": {
+            "title": "Da Ket Luan",
+            "type": "integer"
+          },
+          "dang_mo": {
+            "title": "Dang Mo",
+            "type": "integer"
+          },
+          "phan_hoi_dau_phut": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phan Hoi Dau Phut"
+          },
+          "tickets": {
+            "title": "Tickets",
+            "type": "integer"
+          },
+          "ty_le_dat_sla": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ty Le Dat Sla"
+          },
+          "ty_le_reopen": {
+            "title": "Ty Le Reopen",
+            "type": "number"
+          },
+          "xu_ly_phut": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xu Ly Phut"
+          }
+        },
+        "required": [
+          "agent_id",
+          "tickets",
+          "dang_mo",
+          "da_ket_luan",
+          "ty_le_reopen"
+        ],
+        "title": "AgentPerformanceOut",
+        "type": "object"
+      },
       "AgentStatus": {
         "enum": [
           "available",
@@ -2620,6 +2686,33 @@
         "title": "ReopenRequest",
         "type": "object"
       },
+      "ReplyRequest": {
+        "properties": {
+          "body": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "client_msg_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Msg Id"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "ReplyRequest",
+        "type": "object"
+      },
       "ResolveRequest": {
         "properties": {
           "note": {
@@ -3108,6 +3201,81 @@
         ],
         "title": "SubjectType",
         "type": "string"
+      },
+      "SupportStatsOut": {
+        "properties": {
+          "agents": {
+            "items": {
+              "$ref": "#/components/schemas/AgentPerformanceOut"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "dang_mo": {
+            "title": "Dang Mo",
+            "type": "integer"
+          },
+          "phan_hoi_dau_phut": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phan Hoi Dau Phut"
+          },
+          "qua_han_chua_phan_hoi": {
+            "title": "Qua Han Chua Phan Hoi",
+            "type": "integer"
+          },
+          "tong_ticket": {
+            "title": "Tong Ticket",
+            "type": "integer"
+          },
+          "tu_ngay": {
+            "format": "date-time",
+            "title": "Tu Ngay",
+            "type": "string"
+          },
+          "ty_le_dat_sla": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ty Le Dat Sla"
+          },
+          "ty_le_reopen": {
+            "title": "Ty Le Reopen",
+            "type": "number"
+          },
+          "xu_ly_phut": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xu Ly Phut"
+          }
+        },
+        "required": [
+          "tu_ngay",
+          "tong_ticket",
+          "dang_mo",
+          "qua_han_chua_phan_hoi",
+          "ty_le_reopen",
+          "agents"
+        ],
+        "title": "SupportStatsOut",
+        "type": "object"
       },
       "TicketCategory": {
         "enum": [
@@ -9267,6 +9435,57 @@
         ]
       }
     },
+    "/api/v1/ops/support/stats": {
+      "get": {
+        "description": "Bảng chất lượng CSKH: phản hồi đầu, thời gian xử lý, tỷ lệ reopen, tỷ lệ đạt SLA.\n\nĐòi `read_all` vì đây là số liệu về hiệu suất của người khác — trưởng nhóm xem, không\nphải mọi agent.",
+        "operationId": "support_stats_api_v1_ops_support_stats_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 180,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportStatsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Support Stats",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
     "/api/v1/ops/support/tickets/{ticket_id}": {
       "get": {
         "operationId": "get_ticket_api_v1_ops_support_tickets__ticket_id__get",
@@ -9469,6 +9688,65 @@
           }
         ],
         "summary": "Reopen Ticket",
+        "tags": [
+          "ops-support"
+        ]
+      }
+    },
+    "/api/v1/ops/support/tickets/{ticket_id}/reply": {
+      "post": {
+        "description": "Trả lời khách ngay trong màn hình ticket, và ĐÓNG ĐỒNG HỒ SLA bằng chính lần đó.\n\nTách hai việc này ra hai thao tác là mời người ta quên thao tác thứ hai — rồi báo cáo SLA\nhiển thị \"chưa phản hồi\" cho những ticket đã được trả lời từ lâu.",
+        "operationId": "reply_ticket_api_v1_ops_support_tickets__ticket_id__reply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reply Ticket",
         "tags": [
           "ops-support"
         ]

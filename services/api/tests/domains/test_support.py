@@ -699,3 +699,153 @@ async def test_cskh_tham_gia_hoi_thoai_chuyen_qua_console(db, api_client):
     assert tin.status_code == 200
     assert [m["kind"] for m in tin.json()] == ["system"]
     assert "tham gia hội thoại" in tin.json()[0]["body"]
+
+
+# --- Bảng SLA và hiệu suất (P2-19) ----------------------------------------------------
+
+
+@pytest.mark.integration
+async def test_bang_sla_dem_dung_phan_hoi_dau_va_ty_le_dat(db):
+    """QA-SUP-19. DoD của P2-19: thấy phản hồi đầu, thời gian xử lý, tỷ lệ reopen."""
+    rider = await create_rider(db, phone="0901000091")
+    agent = await _agent(db, email="cs-kpi@goan.vn")
+    dung_han = await service.create_ticket(
+        db, user=rider, subject="Trả lời nhanh", category=TicketCategory.APP_ISSUE
+    )
+    await service.record_first_response(db, dung_han, agent)
+    await service.resolve(db, dung_han, actor=agent, note="Xong")
+
+    bang = await service.performance(db)
+
+    assert bang["tong_ticket"] == 1
+    assert bang["ty_le_dat_sla"] == 1.0
+    assert bang["phan_hoi_dau_phut"] is not None
+    assert bang["xu_ly_phut"] is not None
+    assert [a["agent_id"] for a in bang["agents"]] == [str(agent.id)]
+
+
+@pytest.mark.integration
+async def test_chua_ai_tra_loi_thi_chi_so_la_rong_chu_khong_phai_khong(db):
+    """QA-SUP-20. "Chưa có số liệu" và "phản hồi tức thì" là hai chuyện khác nhau — hiện 0
+    phút cho cái đầu là nói dối bằng biểu đồ."""
+    rider = await create_rider(db, phone="0901000092")
+    await service.create_ticket(
+        db, user=rider, subject="Chưa ai đụng", category=TicketCategory.APP_ISSUE
+    )
+
+    bang = await service.performance(db)
+
+    assert bang["phan_hoi_dau_phut"] is None
+    assert bang["ty_le_dat_sla"] is None
+    assert bang["dang_mo"] == 1
+
+
+@pytest.mark.integration
+async def test_ticket_qua_han_chua_phan_hoi_duoc_dem_khi_van_dang_mo(db):
+    """Đợi tới lúc ticket được đóng mới đếm quá hạn là báo cáo cho một chuyện đã rồi."""
+    rider = await create_rider(db, phone="0901000093")
+    await service.create_ticket(db, user=rider, subject="Tai nạn", category=TicketCategory.SAFETY)
+
+    bang = await service.performance(db, now=datetime.now(timezone.utc) + timedelta(minutes=10))
+
+    assert bang["qua_han_chua_phan_hoi"] == 1
+
+
+@pytest.mark.integration
+async def test_ty_le_reopen_dem_theo_ticket_chu_khong_theo_lan(db):
+    """Một ticket mở lại ba lần vẫn là MỘT ticket có vấn đề, không phải ba."""
+    rider = await create_rider(db, phone="0901000094")
+    agent = await _agent(db, email="cs-reopen@goan.vn")
+    ticket = await service.create_ticket(
+        db, user=rider, subject="Lằng nhằng", category=TicketCategory.OTHER
+    )
+    for _ in range(3):
+        await service.resolve(db, ticket, actor=agent, note="Xong")
+        await service.reopen(db, ticket, reason="Khách chưa hài lòng")
+
+    bang = await service.performance(db)
+
+    assert ticket.reopened_count == 3
+    assert bang["ty_le_reopen"] == 1.0
+
+
+@pytest.mark.security
+@pytest.mark.api
+async def test_agent_thuong_khong_xem_duoc_bang_hieu_suat(db, api_client):
+    """QA-SUP-21. Đây là số liệu hiệu suất của người khác — trưởng nhóm xem, không phải
+    mọi agent."""
+    from tests.domains.test_iam import staff_headers
+
+    agent = await staff_headers(db, api_client, roles=["cs_agent"], email="cs-kpi2@goan.vn")
+    lead = await staff_headers(db, api_client, roles=["cs_lead"], email="lead-kpi@goan.vn")
+
+    assert (await api_client.get("/api/v1/ops/support/stats", headers=agent)).status_code == 403
+    ok = await api_client.get("/api/v1/ops/support/stats", headers=lead)
+    assert ok.status_code == 200 and "agents" in ok.json()
+
+
+@pytest.mark.api
+async def test_tra_loi_trong_man_hinh_ticket_dong_luon_dong_ho_sla(db, api_client):
+    """QA-SUP-22. Tách "trả lời" và "ghi mốc phản hồi" thành hai thao tác là mời người ta
+    quên thao tác thứ hai — rồi báo cáo SLA hiện "chưa phản hồi" cho ticket đã trả lời."""
+    from app.core.constants import UserRole
+    from app.core.security import create_access_token
+    from tests.domains.test_iam import staff_headers
+
+    rider = await create_rider(db, phone="0901000101")
+    rider_headers = {
+        "Authorization": f"Bearer {create_access_token(str(rider.id), UserRole.RIDER.value)}"
+    }
+    headers = await staff_headers(db, api_client, roles=["cs_lead"], email="lead-rep@goan.vn")
+    mo = await api_client.post(
+        "/api/v1/support/tickets",
+        headers=rider_headers,
+        json={"subject": "Ứng dụng lỗi", "category": "app_issue"},
+    )
+    ticket = mo.json()
+    assert ticket["first_response_at"] is None
+
+    tra_loi = await api_client.post(
+        f"/api/v1/ops/support/tickets/{ticket['id']}/reply",
+        headers=headers,
+        json={"body": "Chào anh/chị, em đang kiểm tra ạ"},
+    )
+    assert tra_loi.status_code == 200, tra_loi.text
+
+    sau = await api_client.get(f"/api/v1/ops/support/tickets/{ticket['id']}", headers=headers)
+    assert sau.json()["first_response_at"] is not None
+    assert sau.json()["status"] == "assigned"
+
+    # Khách nhìn thấy cả tin hệ thống "CSKH đã tham gia" lẫn nội dung trả lời.
+    tin = await api_client.get(
+        f"/api/v1/chat/conversations/{ticket['conversation_id']}/messages",
+        headers=rider_headers,
+    )
+    kinds = [m["kind"] for m in tin.json()]
+    assert kinds == ["system", "text"]
+
+
+@pytest.mark.security
+@pytest.mark.api
+async def test_agent_khong_tra_loi_duoc_ticket_cua_nguoi_khac(db, api_client):
+    """Trả lời hộ ticket của đồng nghiệp là vào đọc hội thoại mình không được phân công."""
+    from app.core.constants import UserRole
+    from app.core.security import create_access_token
+    from tests.domains.test_iam import staff_headers
+
+    rider = await create_rider(db, phone="0901000102")
+    chu = await _agent(db, email="cs-chu2@goan.vn")
+    ticket = await service.create_ticket(
+        db, user=rider, subject="Riêng", category=TicketCategory.APP_ISSUE
+    )
+    assert ticket.assigned_agent_id == chu.id
+    nguoi_khac = await staff_headers(db, api_client, roles=["cs_agent"], email="cs-khac2@goan.vn")
+    assert create_access_token(str(rider.id), UserRole.RIDER.value)
+
+    tra_loi = await api_client.post(
+        f"/api/v1/ops/support/tickets/{ticket.id}/reply",
+        headers=nguoi_khac,
+        json={"body": "Tôi trả lời hộ"},
+    )
+
+    assert tra_loi.status_code == 403

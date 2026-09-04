@@ -75,6 +75,12 @@ class ReopenRequest(BaseModel):
     reason: str = Field(min_length=3, max_length=500)
 
 
+class ReplyRequest(BaseModel):
+    body: str = Field(min_length=1, max_length=4000)
+    # Console cũng mất mạng giữa lúc gửi: dùng chung cơ chế khử trùng với app.
+    client_msg_id: str | None = Field(default=None, max_length=64)
+
+
 class PresenceRequest(BaseModel):
     status: AgentStatus
     team: TicketTeam = TicketTeam.CS
@@ -109,3 +115,28 @@ class CannedResponseRequest(BaseModel):
     body: str = Field(min_length=1, max_length=4000)
     shortcut: str = Field(min_length=1, max_length=32)
     is_active: bool = True
+
+
+class AgentPerformanceOut(BaseModel):
+    agent_id: str
+    tickets: int
+    dang_mo: int
+    da_ket_luan: int
+    # Rỗng nghĩa là CHƯA CÓ SỐ LIỆU, không phải bằng 0 — hiển thị 0 phút cho một agent chưa
+    # trả lời ticket nào là nói dối bằng biểu đồ.
+    phan_hoi_dau_phut: float | None = None
+    xu_ly_phut: float | None = None
+    ty_le_reopen: float
+    ty_le_dat_sla: float | None = None
+
+
+class SupportStatsOut(BaseModel):
+    tu_ngay: datetime
+    tong_ticket: int
+    dang_mo: int
+    qua_han_chua_phan_hoi: int
+    phan_hoi_dau_phut: float | None = None
+    xu_ly_phut: float | None = None
+    ty_le_reopen: float
+    ty_le_dat_sla: float | None = None
+    agents: list[AgentPerformanceOut]

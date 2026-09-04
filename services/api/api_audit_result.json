@@ -349,7 +349,7 @@
     "path": "/trips/{id}/rate",
     "expected": 200,
     "got": 200,
-    "note": "trung bình 5.00 / 4 lượt"
+    "note": "trung bình 5.00 / 5 lượt"
   },
   {
     "group": "trips",
@@ -525,7 +525,7 @@
     "path": "/chat/conversations/{id}/messages",
     "expected": 201,
     "got": 201,
-    "note": "{\"id\":\"96d3aaeb-ab49-4959-b7f4-b92700196323\",\"conversation_id\":\"0298b1"
+    "note": "{\"id\":\"3ce38e63-b44b-4b39-8c91-06523db48a11\",\"conversation_id\":\"3322ce"
   },
   {
     "group": "chat",
@@ -573,7 +573,7 @@
     "path": "/chat/attachments",
     "expected": 201,
     "got": 201,
-    "note": "{\"attachment_id\":\"3aee03b2-9f10-45fd-b34d-b5885ec8f15f\",\"storage_key\":"
+    "note": "{\"attachment_id\":\"db30f3c5-e144-4658-9a8d-999789bb4546\",\"storage_key\":"
   },
   {
     "group": "chat",
@@ -645,7 +645,7 @@
     "path": "/support/tickets",
     "expected": 201,
     "got": 201,
-    "note": "{\"id\":\"8c921f5a-531e-4dfc-a2f3-afee22bc3666\",\"code\":\"GA-260904-0003\",\""
+    "note": "{\"id\":\"1c71c724-0b3a-4c2c-a044-5c50fe956ab7\",\"code\":\"GA-260904-0004\",\""
   },
   {
     "group": "support",

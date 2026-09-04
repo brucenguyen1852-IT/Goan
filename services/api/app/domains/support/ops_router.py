@@ -28,7 +28,9 @@ from app.domains.support.schemas import (
     PresenceOut,
     PresenceRequest,
     ReopenRequest,
+    ReplyRequest,
     ResolveRequest,
+    SupportStatsOut,
     TicketEventOut,
     TicketOut,
     TransferRequest,
@@ -133,6 +135,36 @@ async def transfer_ticket(
     return TicketOut.model_validate(ticket)
 
 
+@router.post("/tickets/{ticket_id}/reply", response_model=MessageOut)
+async def reply_ticket(
+    ticket_id: uuid.UUID,
+    body: ReplyRequest,
+    db: AsyncSession = Depends(get_db),
+    staff: StaffUser = Depends(require_permission("support:ticket:write")),
+) -> MessageOut:
+    """Trả lời khách ngay trong màn hình ticket, và ĐÓNG ĐỒNG HỒ SLA bằng chính lần đó.
+
+    Tách hai việc này ra hai thao tác là mời người ta quên thao tác thứ hai — rồi báo cáo SLA
+    hiển thị "chưa phản hồi" cho những ticket đã được trả lời từ lâu.
+    """
+    ticket = await service.get_ticket(db, ticket_id)
+    service.assert_can_read(ticket, staff, read_all=_read_all(staff))
+    if ticket.conversation_id is None:
+        raise NotFoundError("Ticket này không có hội thoại đi kèm")
+
+    conversation = await chat_service.get_conversation(db, ticket.conversation_id)
+    # Agent chưa ở trong hội thoại thì vào trước, để khách thấy tin hệ thống báo có người
+    # nhận việc chứ không phải bỗng dưng có người lạ nhắn tin.
+    await chat_service.agent_join(db, conversation, staff)
+    message, _ = await chat_service.send_message(
+        db, conversation, body=body.body, sender_staff=staff, client_msg_id=body.client_msg_id
+    )
+    if ticket.assigned_agent_id is None:
+        await service.claim(db, ticket, staff)
+    await service.record_first_response(db, ticket, staff)
+    return MessageOut.model_validate(message)
+
+
 @router.post("/tickets/{ticket_id}/resolve", response_model=TicketOut)
 async def resolve_ticket(
     ticket_id: uuid.UUID,
@@ -171,6 +203,26 @@ async def set_presence(
         db, staff, status=body.status, team=body.team, max_chats=body.max_chats
     )
     return PresenceOut.model_validate(presence)
+
+
+# --- Bảng SLA và hiệu suất (P2-19) ----------------------------------------------------
+
+
+@router.get("/stats", response_model=SupportStatsOut)
+async def support_stats(
+    days: int = Query(default=30, ge=1, le=180),
+    db: AsyncSession = Depends(get_db),
+    _: StaffUser = Depends(require_permission(READ_ALL)),
+) -> SupportStatsOut:
+    """Bảng chất lượng CSKH: phản hồi đầu, thời gian xử lý, tỷ lệ reopen, tỷ lệ đạt SLA.
+
+    Đòi `read_all` vì đây là số liệu về hiệu suất của người khác — trưởng nhóm xem, không
+    phải mọi agent.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    return SupportStatsOut.model_validate(await service.performance(db, since=since))
 
 
 # --- Mẫu trả lời (P2-10) --------------------------------------------------------------
