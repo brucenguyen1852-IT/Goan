@@ -6,3 +6,17 @@ __pycache__/
 .ruff_cache/
 *.egg-info/
 .DS_Store
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Sản phẩm phụ khi chạy ở máy, không phải mã nguồn:
+# .gitignore KHÔNG hiểu chú thích cuối dòng: viết `dump.rdb  # snapshot` thì mẫu
+# trở thành cả cụm đó và không khớp file nào.
+# snapshot Redis
+dump.rdb
+# SQLite dev + lịch celery beat
+*.db
+celerybeat-schedule*
+# kết quả lần rà soát API gần nhất
+api_audit_result.json
