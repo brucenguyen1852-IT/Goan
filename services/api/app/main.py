@@ -20,6 +20,7 @@ from app.core.observability import RequestIdMiddleware, setup_sentry, setup_trac
 from app.database import engine
 from app.domains.approvals.router import router as approvals_router
 from app.domains.auth.router import router as auth_router
+from app.domains.chat.router import router as chat_router
 from app.domains.escrow.router import router as escrow_router
 from app.domains.fraud.router import router as fraud_router
 from app.domains.iam.router import router as iam_router
@@ -88,6 +89,7 @@ for r in (
     payments_router,
     partners_router,
     fraud_router,
+    chat_router,
     iam_router,
     ops_users_router,
     approvals_router,

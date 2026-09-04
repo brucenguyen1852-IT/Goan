@@ -3,6 +3,12 @@
 from app.database import Base
 from app.domains.approvals.models import ApprovalRequest
 from app.domains.audit.models import AuditLog
+from app.domains.chat.models import (
+    Conversation,
+    ConversationMember,
+    Message,
+    MessageAttachment,
+)
 from app.domains.escrow.models import EscrowTransaction
 from app.domains.fraud.models import DriverOnlineSession, FraudIncident, FraudReviewQueue
 from app.domains.iam.models import (
@@ -32,6 +38,10 @@ from app.domains.users.models import DriverProfile, User
 __all__ = [
     "Base",
     "AuditLog",
+    "Conversation",
+    "ConversationMember",
+    "Message",
+    "MessageAttachment",
     "ApprovalRequest",
     "StaffUser",
     "Role",

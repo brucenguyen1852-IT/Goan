@@ -10,6 +10,9 @@ class ClientEvent(str, Enum):
     LOCATION_UPDATE = "location_update"
     TRIP_OFFER_RESPONSE = "trip_offer_response"
     PING = "ping"
+    # Chat (P2-05, P2-14). "Đang gõ" KHÔNG lưu DB: nó chỉ có nghĩa trong vài giây, lưu lại
+    # là ghi hàng triệu dòng cho một thông tin không ai đọc lại bao giờ.
+    CHAT_TYPING = "chat.typing"
 
 
 class ServerEvent(str, Enum):
@@ -23,6 +26,13 @@ class ServerEvent(str, Enum):
     SYSTEM_NOTICE = "system_notice"
     # Ảnh chụp đội xe đẩy cho Console mỗi vài giây (P1-09)
     OPS_FLEET_UPDATE = "ops.fleet_update"
+    # Chat (P2): tin mới, đang gõ, đã đọc
+    CHAT_MESSAGE = "chat.message"
+    CHAT_TYPING = "chat.typing"
+    CHAT_READ = "chat.read"
+    # Token hết hạn giữa lúc đang kết nối. Không báo thì client giữ một kết nối vô hiệu
+    # và tưởng mình vẫn đang online (P2-14).
+    AUTH_EXPIRED = "auth.expired"
     ERROR = "error"
     PONG = "pong"
 

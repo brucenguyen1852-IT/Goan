@@ -44,6 +44,10 @@ celery_app.conf.beat_schedule = {
         "task": "app.workers.tasks.expire_stale_approvals",
         "schedule": crontab(minute="*/30"),
     },
+    "close-stale-chat": {
+        "task": "app.workers.tasks.close_stale_chat_conversations",
+        "schedule": crontab(minute=30),
+    },
     "process-escrow-refunds": {
         "task": "app.workers.tasks.process_escrow_refunds",
         "schedule": crontab(hour=3, minute=0),

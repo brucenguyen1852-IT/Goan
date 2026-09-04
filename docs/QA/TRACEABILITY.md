@@ -6,7 +6,7 @@
 > PRD ở đây gồm 3 tài liệu trong `docs/`: kiến trúc kỹ thuật, thiết kế luồng thanh toán,
 > và phân định hệ thống.
 >
-> Cập nhật: 03/09/2026 · **183 test tự động, độ phủ 82,3%** · 76/76 lời gọi API rà soát đạt
+> Cập nhật: 04/09/2026 · **308 test tự động, độ phủ 84%** · 76/76 lời gọi API rà soát đạt
 
 ## Quy ước mã
 
@@ -127,16 +127,23 @@
 | PRD-OPS-15 | Sửa quyền của vai trò từ Console, không cần deploy; không ai sửa được `super_admin` | Phân định §3.2 | `test_trusted_devices.py` QA-ROLE-01…06 | ✅ |
 | PRD-OPS-13 | Tra cứu chuyến có lọc + phân trang con trỏ, tua lại được lộ trình GPS | Phân định §2.2 | `test_ops_console.py` QA-OPS-09…11 | ✅ |
 
-## G. Chat & Hỗ trợ *(toàn bộ thuộc P2, chưa bắt đầu)*
+## G. Chat & Hỗ trợ
 
 | PRD | Yêu cầu | Nguồn | Test | Trạng thái |
 |---|---|---|---|---|
-| PRD-CHAT-01 | Ba loại hội thoại: `trip`, `support`, `internal` | Phân định §7.1 | — | ❌ |
-| PRD-CHAT-02 | **CSKH tham gia hội thoại 3 bên, hai bên đều thấy thông báo** | Phân định §7.1 | — | ❌ |
-| PRD-CHAT-03 | Khử trùng tin nhắn theo `client_msg_id` | Phân định §7.3 | — | ❌ |
-| PRD-CHAT-04 | Mất kết nối rồi nối lại: đồng bộ đủ tin đã lỡ | Phân định §5 | — | ❌ |
-| PRD-CHAT-05 | Chat `trip` tự đóng sau 24 giờ | Phân định §7.1 | — | ❌ |
+| PRD-CHAT-01 | Ba loại hội thoại: `trip`, `support`, `internal`; mỗi chuyến đúng một hội thoại | Phân định §7.1 | `test_chat.py` QA-CHAT-01 | ✅ |
+| PRD-CHAT-02 | **CSKH tham gia hội thoại 3 bên, hai bên đều thấy thông báo** | Phân định §7.1 | `test_chat.py` QA-CHAT-05, QA-CHAT-06 | ✅ |
+| PRD-CHAT-03 | Khử trùng tin nhắn theo `client_msg_id` | Phân định §7.3 | `test_chat.py` QA-CHAT-02 | ✅ |
+| PRD-CHAT-04 | Mất kết nối rồi nối lại: đồng bộ đủ tin đã lỡ | Phân định §5 | `test_chat.py` QA-CHAT-03 | ✅ |
+| PRD-CHAT-05 | Chat `trip` tự đóng sau 24 giờ | Phân định §7.1 | `test_chat.py` QA-CHAT-04 | ✅ |
 | PRD-CHAT-06 | SLA: `urgent` phản hồi đầu ≤ 2 phút, quá hạn tự escalate | Phân định §7.5 | — | ❌ |
+| PRD-CHAT-07 | Rủ thanh toán ngoài app bị **đánh dấu** để rà soát, nhưng tin vẫn gửi đi | Phân định §7.4 | `test_chat.py` QA-CHAT-07 | ✅ |
+| PRD-CHAT-08 | "Đang gõ" đi qua WS, không lưu DB, và chỉ tới thành viên hội thoại | Phân định §7.2 | `test_chat_ws.py` QA-CHAT-08, QA-CHAT-09 | ✅ |
+| PRD-CHAT-09 | Token hết hạn giữa lúc đang kết nối: báo `auth.expired` rồi đóng | Phân định §5 | `test_chat_ws.py` QA-CHAT-10 | ✅ |
+
+> PRD-CHAT-07 không có trong bản PRD gốc: nó là ràng buộc rút ra khi làm P2-04. Chặn tin là
+> đẩy hai bên sang Zalo, và lúc đó không còn gì để rà soát nữa — cờ mà không chặn mới giữ
+> được dấu vết.
 
 ---
 
@@ -150,8 +157,8 @@
 | Chống gian lận | 7 | 6 | 0 | 1 |
 | Bảo mật | 13 | 10 | 0 | 3 |
 | Vận hành | 6 | 3 | 2 | 1 |
-| Chat | 6 | 0 | 0 | 6 |
-| **Tổng** | **69** | **50 (72%)** | **2** | **17** |
+| Chat | 9 | 8 | 0 | 1 |
+| **Tổng** | **72** | **58 (81%)** | **2** | **12** |
 
 **Hai yêu cầu còn thiếu test** — code đã có nhưng chưa chứng minh được:
 
@@ -160,7 +167,7 @@
 | PRD-OPS-04 | "Chỉ ghi thêm, không sửa không xoá" phải chặn ở tầng DB (thu hồi quyền UPDATE/DELETE trên `audit_logs`), không phải ở tầng ứng dụng | Làm cùng lúc với dựng staging (P0) |
 | PRD-OPS-06 | Cần cài `sentry-sdk` và một máy chủ thu nhận giả để kiểm chứng "không gửi kèm PII" | Làm khi bật Sentry thật trên staging (P0) |
 
-**Mười tám yêu cầu "chưa làm" nằm ở P1, P2, P5** — đã có trong Backlog, không phải nợ kỹ thuật.
+**Mười hai yêu cầu "chưa làm" nằm ở P2, P5** — đã có trong Backlog, không phải nợ kỹ thuật.
 
 | PRD-ARCH-01 | Bề mặt API tách theo 5 nhóm đối tượng, đường dẫn cũ vẫn chạy (deprecated) | Phân định §3.1 | `test_api_audiences.py` QA-API-01…06 | ✅ |
 

@@ -12,6 +12,7 @@ from app.core.logging import log_event
 from app.core.security import decode_token
 from app.database import SessionFactory
 from app.deps import STAFF_ROLE
+from app.domains.chat.models import Conversation
 from app.domains.iam import service as iam_service
 from app.domains.iam.models import StaffUser
 from app.domains.matching import service as matching_service
@@ -41,6 +42,13 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)) -> N
     await manager.connect(user_id, websocket)
     try:
         while True:
+            # Token hết hạn giữa chừng: báo cho client rồi đóng, thay vì giữ một kết nối đã
+            # mất hiệu lực mà cả hai bên tưởng vẫn còn (P2-14).
+            remaining = payload.get("exp", 0) - int(datetime.now(timezone.utc).timestamp())
+            if remaining <= 0:
+                await websocket.send_json(server_message(ServerEvent.AUTH_EXPIRED))
+                await websocket.close(code=4401)
+                break
             message = await websocket.receive_json()
             await _handle_message(user_id, role, message, websocket)
     except WebSocketDisconnect:
@@ -58,6 +66,35 @@ async def _handle_message(
 
     if msg_type == ClientEvent.PING.value:
         await websocket.send_json(server_message(ServerEvent.PONG))
+        return
+
+    if msg_type == ClientEvent.CHAT_TYPING.value:
+        # Chuyển tiếp cho những người còn lại trong hội thoại, không ghi gì xuống DB.
+        conversation_id = message.get("conversation_id")
+        if not conversation_id:
+            return
+        async with SessionFactory() as db:
+            conversation = await db.get(Conversation, uuid.UUID(str(conversation_id)))
+            if conversation is None:
+                return
+            # Chỉ thành viên mới được phát tín hiệu "đang gõ" vào một hội thoại. Thiếu bước
+            # này thì ai biết id hội thoại cũng làm phiền được người lạ.
+            if not any(m.user_id == user_id and m.left_at is None for m in conversation.members):
+                return
+            members = [
+                m.user_id
+                for m in conversation.members
+                if m.left_at is None and m.user_id and m.user_id != user_id
+            ]
+        for member_id in members:
+            await manager.send_to_user(
+                member_id,
+                server_message(
+                    ServerEvent.CHAT_TYPING,
+                    conversation_id=str(conversation_id),
+                    user_id=str(user_id),
+                ),
+            )
         return
 
     if msg_type == ClientEvent.LOCATION_UPDATE.value and role is UserRole.DRIVER:

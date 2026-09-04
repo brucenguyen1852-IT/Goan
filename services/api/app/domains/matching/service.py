@@ -29,6 +29,7 @@ from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedEr
 from app.core.geo import haversine_km
 from app.core.logging import log_event
 from app.core.money import vnd
+from app.domains.chat import service as chat_service
 from app.domains.notifications import service as notifications
 from app.domains.partners import service as partners_service
 from app.domains.pricing import service as pricing_service
@@ -223,6 +224,11 @@ async def accept_offer(
             "avatar": profile.user.avatar_url if profile.user else None,
         },
         eta_minutes=eta_minutes,
+    )
+    # Mở hội thoại chuyến ngay khi ghép xong (P2-07): khách vừa được ghép là lúc họ cần hỏi
+    # "anh đang ở đâu", bắt họ đi tìm nút mở chat trước là hỏng đúng khoảnh khắc quan trọng nhất.
+    await chat_service.get_or_create_trip_conversation(
+        db, trip_id=trip.id, rider_id=trip.rider_id, driver_id=driver_user_id
     )
     log_event(logger, "trip_matched", trip_id=str(trip.id), driver_id=str(driver_user_id))
     return trip

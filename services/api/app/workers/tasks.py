@@ -71,3 +71,14 @@ def expire_stale_approvals() -> int:
         return await approvals_service.expire_due(db)
 
     return _run(run)
+
+
+@celery_app.task(name="app.workers.tasks.close_stale_chat_conversations")
+def close_stale_chat_conversations() -> int:
+    """Đóng hội thoại của chuyến đã kết thúc quá 24 giờ (P2-07)."""
+    from app.domains.chat import service as chat_service
+
+    async def run(db):
+        return await chat_service.close_stale_trip_conversations(db)
+
+    return _run(run)
